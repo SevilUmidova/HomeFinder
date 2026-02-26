@@ -1,0 +1,40 @@
+﻿@{
+    ViewData["Title"] = "Reports";
+}
+
+<div class="container py-4">
+    <div class="mb-4">
+        <h2 class="mb-1">📊 Reports</h2>
+        <div class="text-muted">Выбери отчёт и количество строк (top).</div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">🔥 Most viewed apartments</h5>
+                    <p class="card-text text-muted">Топ квартир по просмотрам + график.</p>
+
+                    <form method="get" asp-controller="Report" asp-action="MostViewedApartments" class="d-flex gap-2">
+                        <input type="number" name="top" class="form-control" value="5" min="1" max="50" />
+                        <button class="btn btn-primary">Open</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">🏙 Most popular districts</h5>
+                    <p class="card-text text-muted">Сумма просмотров по району (district) + график.</p>
+
+                    <form method="get" asp-controller="Report" asp-action="MostViewedDistricts" class="d-flex gap-2">
+                        <input type="number" name="top" class="form-control" value="5" min="1" max="50" />
+                        <button class="btn btn-primary">Open</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

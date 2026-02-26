@@ -1,0 +1,169 @@
+﻿@model HomeFinder.Models.Reports.MostViewedApartmentsReportVm
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Most viewed apartments";
+}
+
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h2 class="mb-1">🔥 Most viewed apartments</h2>
+            <div class="text-muted">Top @Model.Top apartments by views</div>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Index">← Back</a>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <h5 class="mb-0">Chart</h5>
+
+                        <div class="d-flex gap-2">
+                            <input id="topInput" type="number" class="form-control form-control-sm" value="@Model.Top" min="1" max="50" style="width:100px;" />
+
+                            <input id="dateFrom" type="date" class="form-control form-control-sm"
+                                   value="@Model.DateFrom.ToString("yyyy-MM-dd")"
+                                   max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                                   style="width:160px;" />
+
+                            <input id="dateTo" type="date" class="form-control form-control-sm"
+                                   value="@Model.DateTo.ToString("yyyy-MM-dd")"
+                                   max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                                   style="width:160px;" />
+
+                            <button id="applyBtn" class="btn btn-sm btn-primary" type="button">Apply</button>
+                        </div>
+                    </div>
+
+                    <div id="reportData">
+                        @await Html.PartialAsync("_MostViewedApartmentsData", Model)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="mb-3">Table</h5>
+
+                    <div id="reportTable">
+                        @await Html.PartialAsync("_MostViewedApartmentsTable", Model)
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        let viewsChartInstance = null;
+
+        function buildLabelsAndData(items) {
+            const labels = [];
+            const data = [];
+
+            for (let i = 0; i < items.length; i++) {
+                const x = items[i];
+                let label = "#" + x.apartmentId;
+                if (x.district && x.district.trim() !== "") label += " • " + x.district;
+                labels.push(label);
+                data.push(x.views);
+            }
+
+            return { labels, data };
+        }
+
+        function renderChartFromJsonText(jsonText) {
+            const payload = JSON.parse(jsonText);
+            const items = payload.items || [];
+            const { labels, data } = buildLabelsAndData(items);
+
+            const canvas = document.getElementById('viewsChart');
+            if (!canvas) return;
+
+            if (viewsChartInstance) {
+                viewsChartInstance.destroy();
+                viewsChartInstance = null;
+            }
+
+            viewsChartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Views',
+                        data,
+                        borderWidth: 1,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+
+        async function reloadReport() {
+            const topEl = document.getElementById('topInput');
+            const dfEl = document.getElementById('dateFrom');
+            const dtEl = document.getElementById('dateTo');
+
+            const top = topEl.value || 5;
+
+            const today = new Date().toISOString().slice(0, 10);
+
+            if (dfEl.value && dfEl.value > today) dfEl.value = today;
+            if (dtEl.value && dtEl.value > today) dtEl.value = today;
+            if (dfEl.value && dtEl.value && dfEl.value > dtEl.value) dfEl.value = dtEl.value;
+
+            const url = `/Report/MostViewedApartmentsData?top=${encodeURIComponent(top)}&dateFrom=${encodeURIComponent(dfEl.value)}&dateTo=${encodeURIComponent(dtEl.value)}`;
+
+            const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!resp.ok) return;
+
+            const html = await resp.text();
+
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            const chartBlock = temp.querySelector('#chartBlock');
+            const jsonBlock = temp.querySelector('#jsonBlock');
+            const tableBlock = temp.querySelector('#tableBlock');
+
+            if (chartBlock) {
+                document.getElementById('reportData').innerHTML = chartBlock.outerHTML;
+            }
+
+            if (jsonBlock) {
+                document.getElementById('reportData').insertAdjacentHTML('beforeend', jsonBlock.outerHTML);
+            }
+
+            if (tableBlock) {
+                document.getElementById('reportTable').innerHTML = tableBlock.innerHTML;
+            }
+
+            const newJsonText = document.getElementById('jsonBlock')?.textContent?.trim();
+            if (newJsonText) renderChartFromJsonText(newJsonText);
+        }
+
+        document.getElementById('applyBtn').addEventListener('click', reloadReport);
+        document.getElementById('topInput').addEventListener('change', reloadReport);
+        document.getElementById('dateFrom').addEventListener('change', reloadReport);
+        document.getElementById('dateTo').addEventListener('change', reloadReport);
+
+        (function init() {
+            const initialJson = document.getElementById('jsonBlock')?.textContent?.trim();
+            if (initialJson) renderChartFromJsonText(initialJson);
+        })();
+    </script>
+}

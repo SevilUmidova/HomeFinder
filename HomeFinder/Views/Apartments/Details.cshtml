@@ -1,0 +1,298 @@
+﻿@model HomeFinder.Models.ApartmentViewModel
+@{
+    ViewData["Title"] = "Apartment Details";
+}
+
+@if (Model.PhotoPaths != null && Model.PhotoPaths.Any())
+{
+    <div id="photoCarousel" class="carousel slide mb-4" data-bs-ride="carousel" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        <div class="carousel-inner">
+            @{
+                int index = 0;
+            }
+            @foreach (var photo in Model.PhotoPaths)
+            {
+                <div class="carousel-item @(index == 0 ? "active" : "")" style="background: #f5f5f5;">
+                    <img src="@photo"
+                         class="d-block w-100"
+                         alt="Photo"
+                         style="height: 450px; object-fit: contain; padding: 20px; background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);"
+                         loading="lazy">
+                </div>
+                index++;
+            }
+        </div>
+
+        @if (Model.PhotoPaths.Count > 1)
+        {
+            <button class="carousel-control-prev" type="button" data-bs-target="#photoCarousel" data-bs-slide="prev" style="background: rgba(0,0,0,0.3); border-radius: 50%; width: 50px; height: 50px; left: 20px;">
+                <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#photoCarousel" data-bs-slide="next" style="background: rgba(0,0,0,0.3); border-radius: 50%; width: 50px; height: 50px; right: 20px;">
+                <span class="carousel-control-next-icon"></span>
+            </button>
+        }
+
+        @* Индикаторы фото *@
+        @if (Model.PhotoPaths.Count > 1)
+        {
+            <div class="carousel-indicators" style="bottom: 10px;">
+                @for (int i = 0; i < Model.PhotoPaths.Count; i++)
+                {
+                    <button type="button"
+                            data-bs-target="#photoCarousel"
+                            data-bs-slide-to="@i"
+                            class="@(i == 0 ? "active" : "")"
+                            style="background-color: rgba(255,255,255,0.7); width: 12px; height: 12px; border-radius: 50%; margin: 0 5px;">
+                    </button>
+                }
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="bg-light text-center p-5 mb-4" style="border-radius: 12px; border: 2px dashed #ccc; min-height: 300px; display: flex; align-items: center; justify-content: center;">
+        <div>
+            <p style="font-size: 48px; margin-bottom: 10px;">🖼️</p>
+            <p class="text-muted">No photos available</p>
+        </div>
+    </div>
+}
+
+<style>
+    .carousel-item img {
+        transition: transform 0.3s ease-in-out;
+    }
+
+        .carousel-item img:hover {
+            transform: scale(1.02);
+        }
+
+    .carousel-control-prev,
+    .carousel-control-next {
+        transition: all 0.3s ease;
+    }
+
+        .carousel-control-prev:hover,
+        .carousel-control-next:hover {
+            background: rgba(0,0,0,0.5) !important;
+        }
+</style>
+
+
+        <!-- INFORMATION -->
+        <div class="col-md-6">
+            <h2>@Model.StreetAddress, @Model.BuildingNumber</h2>
+            <p class="text-muted">@Model.District, @Model.City</p>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4>
+                        <span class="badge bg-success" style="font-size: 1.5rem;">@Model.Price.ToString("F0") UZS</span>
+                        <span class="badge bg-secondary">per month</span>
+                    </h4>
+
+                    <hr>
+
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h5>📐 Size</h5>
+                            <p class="lead">@Model.Size m²</p>
+                        </div>
+                        <div class="col-4">
+                            <h5>🚪 Rooms</h5>
+                            <p class="lead">@Model.Rooms</p>
+                        </div>
+                        <div class="col-4">
+                            <h5>⭐️ Rating</h5>
+                            <p class="lead">@(Model.ReviewCount > 0 ? Model.AverageRating.ToString("F1") : "—")</p>
+                        </div>
+                        <div class="col-4">
+                            <h5>👁️ Views</h5>
+                            <p class="lead">@Model.Views</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">📝 Description</div>
+                <div class="card-body">
+                    @Model.Description
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">👤 Owner</div>
+                <div class="card-body">
+                    <p><strong>@Model.LandlordName</strong></p>
+                    <p><a href="tel:@Model.PhoneNumber">@Model.PhoneNumber</a></p>
+                </div>
+            </div>
+
+            @if (Context.Session.GetString("UserRole") == "Tenant")
+            {
+                <div class="card mb-4">
+                    <div class="card-header">💬 Actions</div>
+                    <div class="card-body">
+                        <a href="tel:@Model.PhoneNumber" class="btn btn-warning w-100 mb-2">
+                            📞 Call
+                        </a>
+                        <a href="@Url.Action("Schedule", "Appointments", new { apartmentId = Model.ApartmentId })" class="btn btn-success w-100 mb-2">
+                            📅 Book Appointment
+                        </a>
+                        <form asp-controller="Favorites" asp-action="AddToFavorites" method="post" class="d-inline w-100" id="favoriteForm">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="apartmentId" value="@Model.ApartmentId" />
+                            <button type="button" class="btn btn-outline-danger w-100" id="favBtn" onclick="toggleFavorite(event)">
+                                <span id="favIcon">❤️</span> <span id="favText">Add to Favorites</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- REVIEW FORM -->
+                <div class="card mb-4">
+                    <div class="card-header">✍️ Leave a Review</div>
+                    <div class="card-body">
+                        <form asp-controller="Reviews" asp-action="AddReview" method="post" id="reviewForm">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="apartmentId" value="@Model.ApartmentId" />
+
+                            <div class="mb-3">
+                                <label class="form-label">⭐️ Rating</label>
+                                <select name="rating" class="form-control" required>
+                                    <option value="">-- Select --</option>
+                                    <option value="5">⭐️⭐️⭐️⭐️⭐️ Excellent</option>
+                                    <option value="4">⭐️⭐️⭐️⭐️ Good</option>
+                                    <option value="3">⭐️⭐️⭐️ Average</option>
+                                    <option value="2">⭐️⭐️ Poor</option>
+                                    <option value="1">⭐️ Very Poor</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">💭 Comment</label>
+                                <textarea name="comment" class="form-control" rows="4" placeholder="Share your opinion..."></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">📤 Submit Review</button>
+                        </form>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <a href="@Url.Action("Login", "Account")">Sign in as a tenant</a> to leave a review
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="mt-4 mb-5">
+        <a href="@Url.Action("Index", "Home")" class="btn btn-secondary">← Back</a>
+    </div>
+</div>
+
+<!-- ⭐️ REVIEWS - FULLY SEPARATED WITHOUT FOOTER -->
+@if (Model != null && Model.ReviewCount > 0)
+{
+    <div class="container mt-5 mb-5">
+        <h3>💬 Reviews (@Model.ReviewCount)</h3>
+
+        @if (Model.Reviews != null && Model.Reviews.Count > 0)
+        {
+            <div class="row mt-4">
+                @foreach (var review in Model.Reviews)
+                {
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h6 class="card-title mb-0">@(review.User?.FirstName ?? "Anonymous")</h6>
+                                    <small class="text-muted">
+                                        @if (review.CreatedAt.HasValue)
+                                        {
+                                            @review.CreatedAt.Value.ToString("dd.MM.yyyy")
+                                        }
+                                    </small>
+                                </div>
+                                <div class="mb-3">
+                                    @for (int i = 0; i < (review.Rating ?? 0); i++)
+                                    {
+                                        <span class="text-warning">⭐️</span>
+                                    }
+                                </div>
+                                <p class="card-text">@review.Comment</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="container mt-5 mb-5">
+        <h3>💬 Reviews (0)</h3>
+        <div class="alert alert-info">
+            📭 No reviews yet. Be the first!
+        </div>
+    </div>
+}
+
+<!-- Extra spacing for footer -->
+<div style="height: 150px;"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    @if (Context.Session.GetString("UserRole") == "Tenant")
+    {
+        <text>
+                    // ✅ Check favorite status on load
+                    checkFavoriteStatus();
+
+                    async function checkFavoriteStatus() {
+                        try {
+                            const response = await fetch('@Url.Action("IsFavorited", "Favorites")' + '?apartmentId=@Model.ApartmentId');
+                            const data = await response.json();
+
+                            if (data.favorited) {
+                                setFavorited(true);
+                            } else {
+                                setFavorited(false);
+                            }
+                        } catch (error) {
+                            console.error('Error checking favorite status:', error);
+                        }
+                    }
+
+                    function setFavorited(isFavorited) {
+                        const btn = document.getElementById('favBtn');
+                        const icon = document.getElementById('favIcon');
+                        const text = document.getElementById('favText');
+
+                        if (isFavorited) {
+                            icon.textContent = '💔';
+                            text.textContent = 'Remove from Favorites';
+                            btn.classList.remove('btn-outline-danger');
+                            btn.classList.add('btn-danger');
+                        } else {
+                            icon.textContent = '❤️';
+                            text.textContent = 'Add to Favorites';
+                            btn.classList.remove('btn-danger');
+                            btn.classList.add('btn-outline-danger');
+                        }
+                    }
+
+                    function toggleFavorite(event) {
+                        event.preventDefault();
+                        document.getElementById('favoriteForm').submit();
+                    }
+        </text>
+    }
+    });
+</script>

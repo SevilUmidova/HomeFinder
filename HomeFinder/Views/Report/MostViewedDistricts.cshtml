@@ -1,0 +1,102 @@
+﻿@model HomeFinder.Models.Reports.MostViewedDistrictsReportVm
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Most popular districts";
+
+    var labels = Model.Items.Select(x => x.District).ToList();
+    var data = Model.Items.Select(x => x.TotalViews).ToList();
+
+    var labelsJson = JsonSerializer.Serialize(labels);
+    var dataJson = JsonSerializer.Serialize(data);
+}
+
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h2 class="mb-1">🏙 Most popular districts</h2>
+            <div class="text-muted">Top @Model.Top districts by total views</div>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Index">← Back</a>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <h5 class="mb-0">Chart</h5>
+                        <form method="get" asp-action="MostViewedDistricts" class="d-flex gap-2">
+                            <input type="number" name="top" class="form-control form-control-sm" value="@Model.Top" min="1" max="50" style="width:100px;" />
+                            <button class="btn btn-sm btn-primary">Apply</button>
+                        </form>
+                    </div>
+
+                    <canvas id="districtsChart" style="min-height: 320px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="mb-3">Table</h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>District</th>
+                                    <th class="text-end">Total views</th>
+                                    <th class="text-end">Apts</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var i = 1;
+                                    foreach (var x in Model.Items)
+                                    {
+                                        <tr>
+                                            <td>@x.District</td>
+                                            <td class="text-end fw-semibold">@x.TotalViews</td>
+                                            <td class="text-end">@x.ApartmentsCount</td>
+                                        </tr>
+                                        ;
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const labels = @Html.Raw(labelsJson);
+        const data = @Html.Raw(dataJson);
+
+        new Chart(document.getElementById('districtsChart'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Total views',
+                    data,
+                    borderWidth: 1,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    </script>
+}
