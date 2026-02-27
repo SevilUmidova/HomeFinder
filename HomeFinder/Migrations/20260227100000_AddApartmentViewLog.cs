@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace HomeFinder.Migrations
 {
-    /// <inheritdoc />
+    [Migration("20260227100000_AddApartmentViewLog")]
     public partial class AddApartmentViewLog : Migration
     {
         /// <inheritdoc />

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace HomeFinder.Migrations
 {
-    /// <inheritdoc />
+    [Migration("20260227110000_RemoveApartmentViewsColumn")]
     public partial class RemoveApartmentViewsColumn : Migration
     {
         /// <inheritdoc />

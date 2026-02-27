@@ -43,7 +43,9 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h5 class="mb-2">Chart</h5>
-                    @await Html.PartialAsync("_MostViewedApartmentsData", Model)
+                    <div id="reportData">
+                        @await Html.PartialAsync("_MostViewedApartmentsData", Model)
+                    </div>
                 </div>
             </div>
         </div>
@@ -52,7 +54,9 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h5 class="mb-3">Table</h5>
-                    @await Html.PartialAsync("_MostViewedApartmentsTable", Model)
+                    <div id="reportTable">
+                        @await Html.PartialAsync("_MostViewedApartmentsTable", Model)
+                    </div>
                 </div>
             </div>
         </div>
