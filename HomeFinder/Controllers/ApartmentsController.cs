@@ -77,8 +77,6 @@ namespace HomeFinder.Controllers
             if (apartment == null)
                 return NotFound();
 
-            apartment.Views ??= 0;
-            apartment.Views++;
             _context.ApartmentViewLogs.Add(new ApartmentViewLog
             {
                 ApartmentId = apartment.ApartmentId,
@@ -87,6 +85,7 @@ namespace HomeFinder.Controllers
             _context.SaveChanges();
 
             var address = apartment.Addresses.FirstOrDefault();
+            var totalViews = _context.ApartmentViewLogs.Count(v => v.ApartmentId == id);
 
             var model = new ApartmentViewModel
             {
@@ -95,7 +94,7 @@ namespace HomeFinder.Controllers
                 Price = apartment.Price ?? 0,
                 Size = apartment.Size ?? 0,
                 Rooms = apartment.Rooms ?? 0,
-                Views = apartment.Views ?? 0,
+                Views = totalViews,
 
                 StreetAddress = address?.StreetAddress,
                 BuildingNumber = address?.BuildingNumber,

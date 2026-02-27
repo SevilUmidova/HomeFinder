@@ -43,31 +43,26 @@ namespace HomeFinder.Controllers
         {
             top = ClampTop(top);
 
+            var viewsByApartment = _context.ApartmentViewLogs
+                .AsNoTracking()
+                .GroupBy(v => v.ApartmentId)
+                .Select(g => new { ApartmentId = g.Key, Views = g.Count() })
+                .ToList();
+
             var districtApartments = _context.Addresses
                 .AsNoTracking()
                 .Where(ad => ad.ApartmentId != null && ad.District != null && ad.District != "")
-                .GroupBy(ad => new { ad.District, ad.ApartmentId })
-                .Select(g => new
-                {
-                    District = g.Key.District!,
-                    ApartmentId = g.Key.ApartmentId!.Value
-                });
+                .Select(ad => new { ad.District!, ApartmentId = ad.ApartmentId!.Value })
+                .ToList();
+
+            var viewCounts = viewsByApartment.ToDictionary(x => x.ApartmentId, x => x.Views);
 
             var items = districtApartments
-                .Join(_context.Apartments.AsNoTracking(),
-                    da => da.ApartmentId,
-                    ap => ap.ApartmentId,
-                    (da, ap) => new
-                    {
-                        da.District,
-                        ApartmentId = ap.ApartmentId,
-                        Views = ap.Views ?? 0
-                    })
                 .GroupBy(x => x.District)
                 .Select(g => new MostViewedDistrictsReportVm.Row
                 {
                     District = g.Key,
-                    TotalViews = g.Sum(x => x.Views),
+                    TotalViews = g.Sum(x => viewCounts.TryGetValue(x.ApartmentId, out var c) ? c : 0),
                     ApartmentsCount = g.Select(x => x.ApartmentId).Distinct().Count()
                 })
                 .OrderByDescending(x => x.TotalViews)

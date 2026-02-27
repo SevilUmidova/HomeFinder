@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace HomeFinder.Models;
@@ -16,8 +16,6 @@ public partial class Apartment
     public int? Size { get; set; }
 
     public int? Rooms { get; set; }
-
-    public int? Views { get; set; }
 
     public virtual ICollection<Address> Addresses { get; set; } = new List<Address>();
 

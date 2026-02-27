@@ -155,10 +155,6 @@ namespace HomeFinder.Migrations
                         .HasColumnType("int")
                         .HasColumnName("user_id");
 
-                    b.Property<int?>("Views")
-                        .HasColumnType("int")
-                        .HasColumnName("views");
-
                     b.HasKey("ApartmentId")
                         .HasName("PK__Apartmen__DC51C2EC9A8FCAC2");
 

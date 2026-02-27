@@ -155,7 +155,6 @@ public partial class HomeFinderContext : DbContext
                 .HasDefaultValue(1)
                 .HasColumnName("size");
             entity.Property(e => e.UserId).HasColumnName("user_id");
-            entity.Property(e => e.Views).HasColumnName("views");
 
             entity.HasOne(d => d.User).WithMany(p => p.Apartments)
                 .HasForeignKey(d => d.UserId)
