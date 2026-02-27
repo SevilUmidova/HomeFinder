@@ -1,4 +1,4 @@
-﻿namespace HomeFinder.Models.Reports
+namespace HomeFinder.Models.Reports
 {
     public class MostViewedApartmentsReportVm
     {
@@ -6,6 +6,12 @@
 
         public DateTime DateFrom { get; set; }
         public DateTime DateTo { get; set; }
+
+        /// <summary>Фильтр по городу: null/пусто = все города.</summary>
+        public string? City { get; set; }
+
+        /// <summary>Список городов для выпадающего списка.</summary>
+        public List<string> Cities { get; set; } = new();
 
         public List<Row> Items { get; set; } = new();
 

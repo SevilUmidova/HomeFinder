@@ -1,4 +1,4 @@
-﻿@model HomeFinder.Models.Reports.MostViewedApartmentsReportVm
+@model HomeFinder.Models.Reports.MostViewedApartmentsReportVm
 @using System.Text.Json
 
 @{
@@ -9,7 +9,7 @@
     <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
             <h2 class="mb-1">🔥 Most viewed apartments</h2>
-            <div class="text-muted">Top @Model.Top apartments by views</div>
+            <div class="text-muted">Топ @Model.Top по просмотрам (с @Model.DateFrom.ToString("dd.MM.yyyy") по @Model.DateTo.ToString("dd.MM.yyyy"))</div>
         </div>
         <a class="btn btn-outline-secondary" asp-action="Index">← Back</a>
     </div>
@@ -126,7 +126,7 @@
             if (dtEl.value && dtEl.value > today) dtEl.value = today;
             if (dfEl.value && dtEl.value && dfEl.value > dtEl.value) dfEl.value = dtEl.value;
 
-            const url = `/Report/MostViewedApartmentsData?top=${encodeURIComponent(top)}&dateFrom=${encodeURIComponent(dfEl.value)}&dateTo=${encodeURIComponent(dtEl.value)}`;
+            const url = `/Report/MostViewedApartmentsData?top=${encodeURIComponent(top)}&dateFrom=${encodeURIComponent(dfEl.value || '')}&dateTo=${encodeURIComponent(dtEl.value || '')}`;
 
             const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!resp.ok) return;

@@ -1,4 +1,4 @@
-﻿using HomeFinder.Context;
+using HomeFinder.Context;
 using HomeFinder.Models.Reports;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +35,7 @@ namespace HomeFinder.Controllers
             var (from, to) = NormalizePeriod(dateFrom, dateTo);
 
             var vm = BuildMostViewedApartmentsVm(top, from, to);
-            return PartialView("_MostViewedApartmentsData", vm);
+            return PartialView("_MostViewedApartmentsDataResponse", vm);
         }
 
         public IActionResult MostViewedDistricts(int top = 5)
