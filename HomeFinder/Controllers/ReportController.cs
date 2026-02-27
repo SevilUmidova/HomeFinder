@@ -83,37 +83,51 @@ namespace HomeFinder.Controllers
 
         private MostViewedApartmentsReportVm BuildMostViewedApartmentsVm(int top, DateTime fromDate, DateTime toDate)
         {
-            var items = _context.Apartments
+            var periodStart = fromDate.Date;
+            var periodEnd = toDate.Date.AddDays(1);
+
+            var topByViews = _context.ApartmentViewLogs
                 .AsNoTracking()
-                .OrderByDescending(a => a.Views ?? 0)
+                .Where(v => v.ViewedAt >= periodStart && v.ViewedAt < periodEnd)
+                .GroupBy(v => v.ApartmentId)
+                .Select(g => new { ApartmentId = g.Key, Views = g.Count() })
+                .OrderByDescending(x => x.Views)
+                .Take(top)
+                .ToList();
+
+            var apartmentIds = topByViews.Select(x => x.ApartmentId).ToList();
+            if (apartmentIds.Count == 0)
+            {
+                return new MostViewedApartmentsReportVm
+                {
+                    Top = top,
+                    DateFrom = fromDate,
+                    DateTo = toDate,
+                    Items = new List<MostViewedApartmentsReportVm.Row>()
+                };
+            }
+
+            var apartments = _context.Apartments
+                .AsNoTracking()
+                .Where(a => apartmentIds.Contains(a.ApartmentId))
                 .Select(a => new MostViewedApartmentsReportVm.Row
                 {
                     ApartmentId = a.ApartmentId,
-                    Views = a.Views ?? 0,
+                    Views = 0,
                     Price = a.Price,
-
-                    District = a.Addresses
-                        .OrderBy(ad => ad.AddressId)
-                        .Select(ad => ad.District)
-                        .FirstOrDefault(),
-
-                    City = a.Addresses
-                        .OrderBy(ad => ad.AddressId)
-                        .Select(ad => ad.City)
-                        .FirstOrDefault(),
-
-                    StreetAddress = a.Addresses
-                        .OrderBy(ad => ad.AddressId)
-                        .Select(ad => ad.StreetAddress)
-                        .FirstOrDefault(),
-
-                    BuildingNumber = a.Addresses
-                        .OrderBy(ad => ad.AddressId)
-                        .Select(ad => ad.BuildingNumber)
-                        .FirstOrDefault(),
+                    District = a.Addresses.OrderBy(ad => ad.AddressId).Select(ad => ad.District).FirstOrDefault(),
+                    City = a.Addresses.OrderBy(ad => ad.AddressId).Select(ad => ad.City).FirstOrDefault(),
+                    StreetAddress = a.Addresses.OrderBy(ad => ad.AddressId).Select(ad => ad.StreetAddress).FirstOrDefault(),
+                    BuildingNumber = a.Addresses.OrderBy(ad => ad.AddressId).Select(ad => ad.BuildingNumber).FirstOrDefault(),
                 })
-                .Take(top)
                 .ToList();
+
+            var viewCounts = topByViews.ToDictionary(x => x.ApartmentId, x => x.Views);
+            foreach (var row in apartments)
+            {
+                row.Views = viewCounts.TryGetValue(row.ApartmentId, out var c) ? c : 0;
+            }
+            var items = apartments.OrderByDescending(r => r.Views).ToList();
 
             return new MostViewedApartmentsReportVm
             {

@@ -38,6 +38,8 @@ public partial class HomeFinderContext : DbContext
 
     public virtual DbSet<LandlordSubscription> LandlordSubscriptions { get; set; }
 
+    public virtual DbSet<ApartmentViewLog> ApartmentViewLogs { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Server=DESKTOP-PQDG5QV;Database=HomeFinder;Trusted_Connection=True;TrustServerCertificate=True");
@@ -154,6 +156,20 @@ public partial class HomeFinderContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.Apartments)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK__Apartment__user___656C112C");
+        });
+
+        modelBuilder.Entity<ApartmentViewLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("ApartmentViewLog", "dbo");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ApartmentId).HasColumnName("apartment_id");
+            entity.Property(e => e.ViewedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("viewed_at");
+            entity.HasOne(d => d.Apartment).WithMany()
+                .HasForeignKey(d => d.ApartmentId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Appointment>(entity =>

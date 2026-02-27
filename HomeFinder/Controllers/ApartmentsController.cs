@@ -1,4 +1,4 @@
-﻿using HomeFinder.Context;
+using HomeFinder.Context;
 using HomeFinder.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -79,6 +79,11 @@ namespace HomeFinder.Controllers
 
             apartment.Views ??= 0;
             apartment.Views++;
+            _context.ApartmentViewLogs.Add(new ApartmentViewLog
+            {
+                ApartmentId = apartment.ApartmentId,
+                ViewedAt = DateTime.Now
+            });
             _context.SaveChanges();
 
             var address = apartment.Addresses.FirstOrDefault();
