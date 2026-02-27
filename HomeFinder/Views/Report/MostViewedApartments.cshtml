@@ -4,18 +4,20 @@
     ViewData["Title"] = "Most viewed apartments";
 }
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+
 <div class="container py-4">
     <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
             <h2 class="mb-1">🔥 Most viewed apartments</h2>
-            <div class="text-muted">
+            <div id="reportPeriod" class="text-muted">
                 Топ @Model.Top по просмотрам (с @Model.DateFrom.ToString("dd.MM.yyyy") по @Model.DateTo.ToString("dd.MM.yyyy"))
             </div>
         </div>
         <a class="btn btn-outline-secondary" asp-action="Index">← Back</a>
     </div>
 
-    <form method="get" asp-action="MostViewedApartments" class="card shadow-sm mb-3">
+    <div class="card shadow-sm mb-3">
         <div class="card-body d-flex flex-wrap align-items-end gap-2">
             <div>
                 <label for="topInput" class="form-label mb-1">Top</label>
@@ -30,10 +32,11 @@
                 <input id="dateTo" name="dateTo" type="text" class="form-control form-control-sm" value="@Model.DateTo.ToString("dd.MM.yyyy")" placeholder="дд.мм.гггг" style="width:140px;" autocomplete="off" />
             </div>
             <div>
-                <button id="applyBtn" class="btn btn-primary btn-sm" type="submit">Apply</button>
+                <button id="applyBtn" class="btn btn-primary btn-sm" type="button">Apply</button>
             </div>
+            <div id="reportError" class="text-danger small ms-2 d-none"></div>
         </div>
-    </form>
+    </div>
 
     <div class="row g-3">
         <div class="col-lg-7">
@@ -59,12 +62,60 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
 
     <script>
-        (function () {
-            const jsonText = document.getElementById('jsonBlock')?.textContent?.trim();
+        let viewsChartInstance = null;
+
+        function setError(message) {
+            const errorEl = document.getElementById('reportError');
+            if (!errorEl) return;
+            if (!message) {
+                errorEl.classList.add('d-none');
+                errorEl.textContent = '';
+                return;
+            }
+            errorEl.textContent = message;
+            errorEl.classList.remove('d-none');
+        }
+
+        function parseRuDate(value) {
+            if (!value) return null;
+            const m = value.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+            if (!m) return null;
+            const day = Number(m[1]);
+            const month = Number(m[2]) - 1;
+            const year = Number(m[3]);
+            const d = new Date(year, month, day);
+            if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
+            return d;
+        }
+
+        function formatRuDate(date) {
+            const dd = String(date.getDate()).padStart(2, '0');
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const yyyy = date.getFullYear();
+            return `${dd}.${mm}.${yyyy}`;
+        }
+
+        function buildLabelsAndData(items) {
+            const labels = [];
+            const data = [];
+
+            for (let i = 0; i < items.length; i++) {
+                const x = items[i];
+                let label = "#" + x.apartmentId;
+                if (x.district && x.district.trim() !== "") label += " • " + x.district;
+                labels.push(label);
+                data.push(x.views || 0);
+            }
+
+            return { labels, data };
+        }
+
+        function renderChartFromJsonText(jsonText) {
             const canvas = document.getElementById('viewsChart');
-            if (!jsonText || !canvas) return;
+            if (!canvas || !jsonText) return;
 
             let payload;
             try {
@@ -74,23 +125,20 @@
             }
 
             const items = payload.items || [];
-            const labels = [];
-            const data = [];
-            for (let i = 0; i < items.length; i++) {
-                const x = items[i];
-                let label = "#" + x.apartmentId;
-                if (x.district && x.district.trim() !== "") label += " • " + x.district;
-                labels.push(label);
-                data.push(x.views || 0);
+            const { labels, data } = buildLabelsAndData(items);
+
+            if (viewsChartInstance) {
+                viewsChartInstance.destroy();
+                viewsChartInstance = null;
             }
 
-            new Chart(canvas, {
+            viewsChartInstance = new Chart(canvas, {
                 type: 'bar',
                 data: {
-                    labels: labels,
+                    labels,
                     datasets: [{
                         label: 'Views',
-                        data: data,
+                        data,
                         borderWidth: 1,
                         borderRadius: 8
                     }]
@@ -101,16 +149,91 @@
                     scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
                 }
             });
-        })();
+        }
+
+        function updatePeriodLabel(top, fromText, toText) {
+            const periodEl = document.getElementById('reportPeriod');
+            if (!periodEl) return;
+            periodEl.textContent = `Топ ${top} по просмотрам (с ${fromText} по ${toText})`;
+        }
+
+        async function reloadReport() {
+            setError('');
+
+            const topEl = document.getElementById('topInput');
+            const dfEl = document.getElementById('dateFrom');
+            const dtEl = document.getElementById('dateTo');
+
+            const topValue = Number(topEl?.value || 5);
+            const top = Number.isFinite(topValue) ? Math.min(50, Math.max(1, topValue)) : 5;
+            if (topEl) topEl.value = String(top);
+
+            const fromText = (dfEl?.value || '').trim();
+            const toText = (dtEl?.value || '').trim();
+            const fromDate = parseRuDate(fromText);
+            const toDate = parseRuDate(toText);
+
+            if (!fromDate || !toDate) {
+                setError('Введите даты в формате dd.MM.yyyy.');
+                return;
+            }
+
+            if (fromDate > toDate) {
+                setError('Дата "От" не может быть больше даты "До".');
+                return;
+            }
+
+            const url = `/Report/MostViewedApartmentsData?top=${encodeURIComponent(top)}&dateFrom=${encodeURIComponent(fromText)}&dateTo=${encodeURIComponent(toText)}`;
+            const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!resp.ok) {
+                setError('Не удалось загрузить данные отчёта.');
+                return;
+            }
+
+            const html = await resp.text();
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            const chartBlock = temp.querySelector('#chartBlock');
+            const jsonBlock = temp.querySelector('#jsonBlock');
+            const tableBlock = temp.querySelector('#tableBlock');
+
+            if (!chartBlock || !jsonBlock || !tableBlock) {
+                setError('Получен некорректный ответ сервера.');
+                return;
+            }
+
+            const reportData = document.getElementById('reportData');
+            const reportTable = document.getElementById('reportTable');
+            if (!reportData || !reportTable) {
+                setError('Не удалось обновить данные на странице.');
+                return;
+            }
+
+            reportData.innerHTML = chartBlock.outerHTML + jsonBlock.outerHTML;
+            reportTable.innerHTML = tableBlock.innerHTML;
+
+            updatePeriodLabel(top, fromText, toText);
+            renderChartFromJsonText(document.getElementById('jsonBlock')?.textContent?.trim() || '');
+        }
+
+        const applyBtn = document.getElementById('applyBtn');
+        if (applyBtn) applyBtn.addEventListener('click', reloadReport);
 
         flatpickr("#dateFrom", {
             dateFormat: "d.m.Y",
-            allowInput: true
+            allowInput: true,
+            disableMobile: true,
+            locale: (window.flatpickr && window.flatpickr.l10ns && window.flatpickr.l10ns.ru) ? window.flatpickr.l10ns.ru : undefined
         });
 
         flatpickr("#dateTo", {
             dateFormat: "d.m.Y",
-            allowInput: true
+            allowInput: true,
+            disableMobile: true,
+            locale: (window.flatpickr && window.flatpickr.l10ns && window.flatpickr.l10ns.ru) ? window.flatpickr.l10ns.ru : undefined
         });
+
+        renderChartFromJsonText(document.getElementById('jsonBlock')?.textContent?.trim() || '');
     </script>
 }
