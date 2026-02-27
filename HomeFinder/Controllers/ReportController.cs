@@ -2,6 +2,7 @@ using HomeFinder.Context;
 using HomeFinder.Models.Reports;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace HomeFinder.Controllers
 {
@@ -19,20 +20,20 @@ namespace HomeFinder.Controllers
             return View();
         }
 
-        public IActionResult MostViewedApartments(int top = 5, DateTime? dateFrom = null, DateTime? dateTo = null)
+        public IActionResult MostViewedApartments(int top = 5, string? dateFrom = null, string? dateTo = null)
         {
             top = ClampTop(top);
-            var (from, to) = NormalizePeriod(dateFrom, dateTo);
+            var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
 
             var vm = BuildMostViewedApartmentsVm(top, from, to);
             return View(vm);
         }
 
         [HttpGet]
-        public IActionResult MostViewedApartmentsData(int top = 5, DateTime? dateFrom = null, DateTime? dateTo = null)
+        public IActionResult MostViewedApartmentsData(int top = 5, string? dateFrom = null, string? dateTo = null)
         {
             top = ClampTop(top);
-            var (from, to) = NormalizePeriod(dateFrom, dateTo);
+            var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
 
             var vm = BuildMostViewedApartmentsVm(top, from, to);
             return PartialView("_MostViewedApartmentsDataResponse", vm);
@@ -140,6 +141,23 @@ namespace HomeFinder.Controllers
             }
 
             return (from, to);
+        }
+
+        private static DateTime? ParseDate(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+
+            if (DateTime.TryParseExact(
+                value.Trim(),
+                "dd.MM.yyyy",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var parsed))
+            {
+                return parsed.Date;
+            }
+
+            return null;
         }
 
         private static int ClampTop(int top)
