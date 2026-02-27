@@ -52,7 +52,7 @@ namespace HomeFinder.Controllers
             var districtApartments = _context.Addresses
                 .AsNoTracking()
                 .Where(ad => ad.ApartmentId != null && ad.District != null && ad.District != "")
-                .Select(ad => new { ad.District!, ApartmentId = ad.ApartmentId!.Value })
+                .Select(ad => new { District = ad.District!, ApartmentId = ad.ApartmentId!.Value })
                 .ToList();
 
             var viewCounts = viewsByApartment.ToDictionary(x => x.ApartmentId, x => x.Views);
