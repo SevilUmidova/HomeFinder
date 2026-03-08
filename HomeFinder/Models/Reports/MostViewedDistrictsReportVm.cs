@@ -1,8 +1,10 @@
-﻿namespace HomeFinder.Models.Reports;
+namespace HomeFinder.Models.Reports;
 
 public sealed class MostViewedDistrictsReportVm
 {
     public int Top { get; set; }
+    public DateTime DateFrom { get; set; }
+    public DateTime DateTo { get; set; }
     public List<Row> Items { get; set; } = new();
 
     public sealed class Row

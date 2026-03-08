@@ -39,12 +39,31 @@ namespace HomeFinder.Controllers
             return PartialView("_MostViewedApartmentsDataResponse", vm);
         }
 
-        public IActionResult MostViewedDistricts(int top = 5)
+        public IActionResult MostViewedDistricts(int top = 5, string? dateFrom = null, string? dateTo = null)
         {
             top = ClampTop(top);
+            var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
+            var vm = BuildMostViewedDistrictsVm(top, from, to);
+            return View(vm);
+        }
+
+        [HttpGet]
+        public IActionResult MostViewedDistrictsData(int top = 5, string? dateFrom = null, string? dateTo = null)
+        {
+            top = ClampTop(top);
+            var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
+            var vm = BuildMostViewedDistrictsVm(top, from, to);
+            return PartialView("_MostViewedDistrictsDataResponse", vm);
+        }
+
+        private MostViewedDistrictsReportVm BuildMostViewedDistrictsVm(int top, DateTime fromDate, DateTime toDate)
+        {
+            var periodStart = fromDate.Date;
+            var periodEnd = toDate.Date.AddDays(1);
 
             var viewsByApartment = _context.ApartmentViewLogs
                 .AsNoTracking()
+                .Where(v => v.ViewedAt >= periodStart && v.ViewedAt < periodEnd)
                 .GroupBy(v => v.ApartmentId)
                 .Select(g => new { ApartmentId = g.Key, Views = g.Count() })
                 .ToList();
@@ -69,11 +88,13 @@ namespace HomeFinder.Controllers
                 .Take(top)
                 .ToList();
 
-            return View(new MostViewedDistrictsReportVm
+            return new MostViewedDistrictsReportVm
             {
                 Top = top,
+                DateFrom = fromDate,
+                DateTo = toDate,
                 Items = items
-            });
+            };
         }
 
         private MostViewedApartmentsReportVm BuildMostViewedApartmentsVm(int top, DateTime fromDate, DateTime toDate)
