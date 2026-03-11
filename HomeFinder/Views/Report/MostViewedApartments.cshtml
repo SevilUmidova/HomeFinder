@@ -67,7 +67,7 @@
         <div class="col-lg-5">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="mb-3">Table</h5>
+                    <h5 class="mb-3">Apartments</h5>
                     <div id="reportTable">
                         @await Html.PartialAsync("_MostViewedApartmentsTable", Model)
                     </div>
@@ -196,16 +196,16 @@
         }
 
         function applyDistrictFilterToTable(selectedDistrict) {
-            const tbody = document.querySelector('#reportTable tbody');
-            if (!tbody) return;
+            const container = document.getElementById('reportTable');
+            if (!container) return;
 
-            const rows = tbody.querySelectorAll('tr[data-district]');
-            rows.forEach(row => {
-                const d = (row.dataset.district || '').trim();
+            const cards = container.querySelectorAll('.report-apartment-card[data-district]');
+            cards.forEach(card => {
+                const d = (card.dataset.district || '').trim();
                 if (!selectedDistrict || d === selectedDistrict) {
-                    row.classList.remove('d-none');
+                    card.classList.remove('d-none');
                 } else {
-                    row.classList.add('d-none');
+                    card.classList.add('d-none');
                 }
             });
         }
