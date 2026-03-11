@@ -32,6 +32,20 @@
                 <input id="dateTo" name="dateTo" type="text" class="form-control form-control-sm" value="@Model.DateTo.ToString("dd.MM.yyyy")" placeholder="дд.мм.гггг" style="width:140px;" autocomplete="off" />
             </div>
             <div>
+                <label for="districtFilter" class="form-label mb-1">Район</label>
+                <select id="districtFilter" class="form-select form-select-sm" style="min-width: 180px;">
+                    <option value="">Все районы</option>
+                    @foreach (var d in Model.Items
+                        .Select(x => x.District)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Distinct()
+                        .OrderBy(x => x))
+                    {
+                        <option value="@d">@d</option>
+                    }
+                </select>
+            </div>
+            <div>
                 <button id="applyBtn" class="btn btn-primary btn-sm" type="button">Apply</button>
             </div>
             <div id="reportError" class="text-danger small ms-2 d-none"></div>
@@ -70,6 +84,7 @@
 
     <script>
         let viewsChartInstance = null;
+        let currentItems = [];
 
         function setError(message) {
             const errorEl = document.getElementById('reportError');
@@ -117,19 +132,11 @@
             return { labels, data };
         }
 
-        function renderChartFromJsonText(jsonText) {
+        function renderChartForItems(items) {
             const canvas = document.getElementById('viewsChart');
-            if (!canvas || !jsonText) return;
+            if (!canvas) return;
 
-            let payload;
-            try {
-                payload = JSON.parse(jsonText);
-            } catch {
-                return;
-            }
-
-            const items = payload.items || [];
-            const { labels, data } = buildLabelsAndData(items);
+            const { labels, data } = buildLabelsAndData(items || []);
 
             if (viewsChartInstance) {
                 viewsChartInstance.destroy();
@@ -153,6 +160,78 @@
                     scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
                 }
             });
+        }
+
+        function updateDistrictFilterOptions(items) {
+            const select = document.getElementById('districtFilter');
+            if (!select) return;
+
+            const previousValue = select.value;
+
+            const districts = Array.from(new Set(
+                (items || [])
+                    .map(x => (x.district || '').trim())
+                    .filter(x => x !== '')
+            )).sort((a, b) => a.localeCompare(b));
+
+            select.innerHTML = '';
+
+            const allOpt = document.createElement('option');
+            allOpt.value = '';
+            allOpt.textContent = 'Все районы';
+            select.appendChild(allOpt);
+
+            districts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                select.appendChild(opt);
+            });
+
+            if (previousValue && districts.includes(previousValue)) {
+                select.value = previousValue;
+            } else {
+                select.value = '';
+            }
+        }
+
+        function applyDistrictFilterToTable(selectedDistrict) {
+            const tbody = document.querySelector('#reportTable tbody');
+            if (!tbody) return;
+
+            const rows = tbody.querySelectorAll('tr[data-district]');
+            rows.forEach(row => {
+                const d = (row.dataset.district || '').trim();
+                if (!selectedDistrict || d === selectedDistrict) {
+                    row.classList.remove('d-none');
+                } else {
+                    row.classList.add('d-none');
+                }
+            });
+        }
+
+        function renderChartFromJsonText(jsonText) {
+            const canvas = document.getElementById('viewsChart');
+            if (!canvas || !jsonText) return;
+
+            let payload;
+            try {
+                payload = JSON.parse(jsonText);
+            } catch {
+                return;
+            }
+
+            currentItems = payload.items || [];
+            updateDistrictFilterOptions(currentItems);
+
+            const select = document.getElementById('districtFilter');
+            const selected = select ? (select.value || '') : '';
+            const filtered = !selected
+                ? currentItems
+                : currentItems.filter(x => (x.district || '').trim() === selected);
+
+            renderChartForItems(filtered);
+            applyDistrictFilterToTable(selected);
         }
 
         function updatePeriodLabel(top, fromText, toText) {
@@ -223,6 +302,20 @@
 
         const applyBtn = document.getElementById('applyBtn');
         if (applyBtn) applyBtn.addEventListener('click', reloadReport);
+
+        const districtSelect = document.getElementById('districtFilter');
+        if (districtSelect) {
+            districtSelect.addEventListener('change', function () {
+                const selected = this.value || '';
+                const items = currentItems || [];
+                const filtered = !selected
+                    ? items
+                    : items.filter(x => (x.district || '').trim() === selected);
+
+                renderChartForItems(filtered);
+                applyDistrictFilterToTable(selected);
+            });
+        }
 
         flatpickr("#dateFrom", {
             dateFormat: "d.m.Y",

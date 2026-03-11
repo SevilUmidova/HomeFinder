@@ -1,4 +1,4 @@
-﻿@model HomeFinder.Models.Reports.MostViewedApartmentsReportVm
+@model HomeFinder.Models.Reports.MostViewedApartmentsReportVm
 
 <div class="table-responsive">
     <table class="table table-sm align-middle">
@@ -13,7 +13,7 @@
             @foreach (var x in Model.Items)
             {
                 var addr = $"{x.City}, {x.District}, {x.StreetAddress} {x.BuildingNumber}".Replace(" ,", ",").Trim(' ', ',');
-                <tr>
+                <tr data-district="@x.District">
                     <td>#@x.ApartmentId</td>
                     <td>@(string.IsNullOrWhiteSpace(addr) ? "—" : addr)</td>
                     <td class="text-end fw-semibold">@x.Views</td>
