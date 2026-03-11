@@ -1,4 +1,4 @@
-﻿using HomeFinder.Context;
+using HomeFinder.Context;
 using HomeFinder.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -151,6 +151,102 @@ namespace HomeFinder.Controllers
             ViewData["Alltext"] = alltext;
 
             return View(viewModels);
+        }
+
+        [HttpPost]
+        public IActionResult FilterByArea([FromBody] MapAreaRequest request)
+        {
+            if (request?.Polygon == null || request.Polygon.Count < 3)
+            {
+                return BadRequest("Polygon is required");
+            }
+
+            var minLat = request.Polygon.Min(p => p.Lat);
+            var maxLat = request.Polygon.Max(p => p.Lat);
+            var minLng = request.Polygon.Min(p => p.Lng);
+            var maxLng = request.Polygon.Max(p => p.Lng);
+
+            // Грубый отбор по bounding box - уходит в SQL
+            var candidates = _context.Apartments
+                .AsNoTracking()
+                .Include(a => a.Addresses)
+                .Include(a => a.Photos)
+                .Include(a => a.User)
+                .Include(a => a.ReviewApartments)
+                .Where(a => a.Addresses.Any(ad =>
+                    ad.Latitude  >= minLat && ad.Latitude  <= maxLat &&
+                    ad.Longitude >= minLng && ad.Longitude <= maxLng))
+                .Select(a => new
+                {
+                    ApartmentId = a.ApartmentId,
+                    Price = a.Price ?? 0,
+                    StreetAddress = a.Addresses
+                        .OrderBy(x => x.AddressId)
+                        .Select(x => x.StreetAddress)
+                        .FirstOrDefault(),
+                    BuildingNumber = a.Addresses
+                        .OrderBy(x => x.AddressId)
+                        .Select(x => x.BuildingNumber)
+                        .FirstOrDefault(),
+                    Latitude = a.Addresses
+                        .OrderBy(x => x.AddressId)
+                        .Select(x => x.Latitude)
+                        .FirstOrDefault(),
+                    Longitude = a.Addresses
+                        .OrderBy(x => x.AddressId)
+                        .Select(x => x.Longitude)
+                        .FirstOrDefault()
+                })
+                .ToList();
+
+            bool PointInPolygon(double lat, double lng, List<MapPointDto> poly)
+            {
+                var pts = poly
+                    .Select(p => new { X = (double)p.Lng, Y = (double)p.Lat })
+                    .ToList();
+
+                bool inside = false;
+                double x = lng;
+                double y = lat;
+
+                for (int i = 0, j = pts.Count - 1; i < pts.Count; j = i++)
+                {
+                    var pi = pts[i];
+                    var pj = pts[j];
+
+                    bool intersect = ((pi.Y > y) != (pj.Y > y)) &&
+                        (x < (pj.X - pi.X) * (y - pi.Y) / (pj.Y - pi.Y) + pi.X);
+
+                    if (intersect)
+                    {
+                        inside = !inside;
+                    }
+                }
+
+                return inside;
+            }
+
+            var filtered = candidates
+                .Where(a =>
+                    a.Latitude.HasValue &&
+                    a.Longitude.HasValue &&
+                    PointInPolygon(
+                        (double)a.Latitude.Value,
+                        (double)a.Longitude.Value,
+                        request.Polygon))
+                .ToList();
+
+            var result = filtered.Select(a => new
+            {
+                id = a.ApartmentId,
+                lat = a.Latitude,
+                lng = a.Longitude,
+                address = $"{a.StreetAddress} {a.BuildingNumber}",
+                price = a.Price,
+                detailsUrl = Url.Action("Details", "Apartments", new { id = a.ApartmentId })
+            });
+
+            return Json(result);
         }
     }
 }

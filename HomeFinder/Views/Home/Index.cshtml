@@ -221,87 +221,38 @@
         maxZoom: 19
     }).addTo(map);
 
-    // Все маркеры квартир храним в массиве для фильтрации по области
+    // Текущие маркеры квартир храним в массиве
     const apartmentMarkers = [];
 
-    apartments.forEach(a => {
-        if (!a.lat || !a.lng) return;
+    function clearMarkers() {
+        apartmentMarkers.forEach(item => {
+            map.removeLayer(item.marker);
+        });
+        apartmentMarkers.length = 0;
+    }
 
-        const marker = L.marker([a.lat, a.lng]).addTo(map);
-        marker.bindPopup(`
-            <strong>${a.address}</strong><br/>
-            <span style="color:green; font-weight:bold;">
-                ${a.price.toLocaleString()} UZS
-            </span><br/>
-            <a href="${a.detailsUrl}">Open details</a>
-        `);
-        apartmentMarkers.push({ marker, lat: a.lat, lng: a.lng });
-    });
+    function renderMarkers(source) {
+        source.forEach(a => {
+            if (!a.lat || !a.lng) return;
+
+            const marker = L.marker([a.lat, a.lng]).addTo(map);
+            marker.bindPopup(`
+                <strong>${a.address}</strong><br/>
+                <span style="color:green; font-weight:bold;">
+                    ${a.price.toLocaleString()} UZS
+                </span><br/>
+                <a href="${a.detailsUrl}">Open details</a>
+            `);
+            apartmentMarkers.push({ marker, lat: a.lat, lng: a.lng });
+        });
+    }
+
+    // начальная отрисовка всех квартир
+    renderMarkers(apartments);
 
     // Слой нарисованных областей (при перерисовке очищаем — остаётся только новая)
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
-
-    // Точка внутри полигона (ray casting), работаем в проекции lng=x, lat=y
-    function pointInPolygon(lat, lng, latLngs) {
-        const rings = latLngs[0] && Array.isArray(latLngs[0]) ? latLngs : [latLngs];
-        // учитываем только внешнее кольцо
-        const ring = rings[0];
-        const points = ring.map(function (ll) {
-            const _lat = ll.lat ?? ll[0];
-            const _lng = ll.lng ?? ll[1];
-            return [_lng, _lat]; // [x, y] = [lng, lat]
-        });
-
-        let inside = false;
-        const x = lng;
-        const y = lat;
-
-        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-            const xi = points[i][0], yi = points[i][1];
-            const xj = points[j][0], yj = points[j][1];
-
-            const intersect = ((yi > y) !== (yj > y)) &&
-                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-
-            if (intersect) inside = !inside;
-        }
-        return inside;
-    }
-
-    function isInsideShape(lat, lng, layer) {
-        // Прямоугольник: достаточно bounds
-        if (layer instanceof L.Rectangle) {
-            return layer.getBounds().contains([lat, lng]);
-        }
-
-        // Обычный полигон: точная проверка по контуру
-        if (layer instanceof L.Polygon && layer.getLatLngs) {
-            return pointInPolygon(lat, lng, layer.getLatLngs());
-        }
-
-        // Фоллбэк: если что-то другое, используем bounds
-        if (layer.getBounds) {
-            return layer.getBounds().contains([lat, lng]);
-        }
-
-        return false;
-    }
-
-    function filterMarkersByShape(shapeLayer) {
-        apartmentMarkers.forEach(function (item) {
-            const inside = isInsideShape(item.lat, item.lng, shapeLayer);
-            item.marker.setOpacity(inside ? 1 : 0);
-            item.marker.setZIndexOffset(inside ? 0 : -1000);
-        });
-    }
-
-    function showAllMarkers() {
-        apartmentMarkers.forEach(function (item) {
-            item.marker.setOpacity(1);
-            item.marker.setZIndexOffset(0);
-        });
-    }
 
     // Панель рисования: только прямоугольник и полигон
     const drawControl = new L.Control.Draw({
@@ -321,13 +272,40 @@
         drawnItems.clearLayers();
         const layer = e.layer;
         drawnItems.addLayer(layer);
-        filterMarkersByShape(layer);
-        document.getElementById('clearMapArea').style.display = 'inline-block';
+
+        // Преобразуем фигуру (прямоугольник/полигон) в массив точек полигона
+        let latLngs = layer.getLatLngs();
+        if (Array.isArray(latLngs[0])) {
+            latLngs = latLngs[0];
+        }
+
+        const polygon = latLngs.map(ll => ({
+            lat: ll.lat,
+            lng: ll.lng
+        }));
+
+        fetch('@Url.Action("FilterByArea", "Home")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ polygon })
+        })
+            .then(r => r.ok ? r.json() : Promise.reject(r))
+            .then(data => {
+                clearMarkers();
+                renderMarkers(data);
+                document.getElementById('clearMapArea').style.display = 'inline-block';
+            })
+            .catch(err => {
+                console.error('FilterByArea error', err);
+            });
     });
 
     document.getElementById('clearMapArea').addEventListener('click', function () {
         drawnItems.clearLayers();
-        showAllMarkers();
+        clearMarkers();
+        renderMarkers(apartments);
         this.style.display = 'none';
     });
 </script>
