@@ -123,7 +123,7 @@
     <div class="row">
         @foreach (var apt in Model)
         {
-            <div class="col-md-4 mb-4">
+            <div class="col-md-4 mb-4 apartment-card" data-apartment-id="@apt.ApartmentId">
                 <div class="card h-100 shadow-sm">
 
                     @if (apt.PhotoPaths != null && apt.PhotoPaths.Any())
@@ -250,6 +250,24 @@
     // начальная отрисовка всех квартир
     renderMarkers(apartments);
 
+    // --- Связь карты и списка карточек ниже ---
+    function filterCardsByIds(ids) {
+        const idSet = new Set(ids || []);
+        const cards = document.querySelectorAll('.apartment-card[data-apartment-id]');
+        cards.forEach(card => {
+            const id = parseInt(card.dataset.apartmentId, 10);
+            if (!ids || ids.length === 0 || idSet.has(id)) {
+                card.classList.remove('d-none');
+            } else {
+                card.classList.add('d-none');
+            }
+        });
+    }
+
+    function showAllCards() {
+        filterCardsByIds(null);
+    }
+
     // Слой нарисованных областей (при перерисовке очищаем — остаётся только новая)
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
@@ -295,6 +313,8 @@
             .then(data => {
                 clearMarkers();
                 renderMarkers(data);
+                const ids = data.map(a => a.id);
+                filterCardsByIds(ids);
                 document.getElementById('clearMapArea').style.display = 'inline-block';
             })
             .catch(err => {
@@ -306,6 +326,7 @@
         drawnItems.clearLayers();
         clearMarkers();
         renderMarkers(apartments);
+        showAllCards();
         this.style.display = 'none';
     });
 </script>
