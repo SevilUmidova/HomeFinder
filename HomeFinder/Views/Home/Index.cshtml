@@ -242,27 +242,49 @@
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
 
-    // Точка внутри полигона (ray casting)
+    // Точка внутри полигона (ray casting), работаем в проекции lng=x, lat=y
     function pointInPolygon(lat, lng, latLngs) {
-        const ring = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
-        const points = ring.map(function (ll) { return [ll.lat ?? ll[0], ll.lng ?? ll[1]]; });
+        const rings = latLngs[0] && Array.isArray(latLngs[0]) ? latLngs : [latLngs];
+        // учитываем только внешнее кольцо
+        const ring = rings[0];
+        const points = ring.map(function (ll) {
+            const _lat = ll.lat ?? ll[0];
+            const _lng = ll.lng ?? ll[1];
+            return [_lng, _lat]; // [x, y] = [lng, lat]
+        });
+
         let inside = false;
-        const x = lat, y = lng;
+        const x = lng;
+        const y = lat;
+
         for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
             const xi = points[i][0], yi = points[i][1];
             const xj = points[j][0], yj = points[j][1];
-            if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+
+            const intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+
+            if (intersect) inside = !inside;
         }
         return inside;
     }
 
     function isInsideShape(lat, lng, layer) {
+        // Прямоугольник: достаточно bounds
+        if (layer instanceof L.Rectangle) {
+            return layer.getBounds().contains([lat, lng]);
+        }
+
+        // Обычный полигон: точная проверка по контуру
+        if (layer instanceof L.Polygon && layer.getLatLngs) {
+            return pointInPolygon(lat, lng, layer.getLatLngs());
+        }
+
+        // Фоллбэк: если что-то другое, используем bounds
         if (layer.getBounds) {
             return layer.getBounds().contains([lat, lng]);
         }
-        if (layer.getLatLngs) {
-            return pointInPolygon(lat, lng, layer.getLatLngs());
-        }
+
         return false;
     }
 
