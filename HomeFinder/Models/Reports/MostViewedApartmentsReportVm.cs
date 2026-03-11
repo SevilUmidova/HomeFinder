@@ -18,6 +18,7 @@ namespace HomeFinder.Models.Reports
             public string? City { get; set; }
             public string? StreetAddress { get; set; }
             public string? BuildingNumber { get; set; }
+            public string? PhotoPath { get; set; }
         }
     }
 }

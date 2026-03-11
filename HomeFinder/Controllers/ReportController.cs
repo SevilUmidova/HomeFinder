@@ -135,6 +135,7 @@ namespace HomeFinder.Controllers
                     City = a.Addresses.OrderBy(ad => ad.AddressId).Select(ad => ad.City).FirstOrDefault(),
                     StreetAddress = a.Addresses.OrderBy(ad => ad.AddressId).Select(ad => ad.StreetAddress).FirstOrDefault(),
                     BuildingNumber = a.Addresses.OrderBy(ad => ad.AddressId).Select(ad => ad.BuildingNumber).FirstOrDefault(),
+                    PhotoPath = a.Photos.OrderBy(p => p.PhotoId).Select(p => p.PhotoPath).FirstOrDefault()
                 })
                 .ToList();
 
