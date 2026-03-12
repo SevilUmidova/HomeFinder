@@ -60,6 +60,7 @@
                                 @if (appointment.DateTime.HasValue && appointment.DateTime.Value > DateTime.Now)
                                 {
                                     <form method="post" asp-action="CancelAppointment" class="d-inline">
+                                        @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@appointment.AppointmentId" />
                                         <button type="submit" class="btn btn-sm btn-danger"
                                                 onclick="return confirm('Cancel this appointment?')">

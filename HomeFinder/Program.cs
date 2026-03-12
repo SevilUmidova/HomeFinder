@@ -1,5 +1,6 @@
 
 using HomeFinder.Context;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace HomeFinder
@@ -27,7 +28,11 @@ namespace HomeFinder
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             });
             // Add services to the container.
-            builder.Services.AddControllersWithViews();
+            builder.Services.AddControllersWithViews(options =>
+            {
+                // Глобально требуем анти‑подделку для всех небезопасных методов (POST/PUT/DELETE)
+                options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+            });
 
             var app = builder.Build();
 

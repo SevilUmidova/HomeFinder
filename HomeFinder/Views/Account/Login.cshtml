@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "System Login";
     Layout = null;
 }
@@ -108,6 +108,7 @@
         }
 
         <form method="post" action="@Url.Action("Login", "Account")">
+            @Html.AntiForgeryToken()
             <div class="mb-3">
                 <label>User Type</label>
                 <select name="userType" class="form-control" required>
