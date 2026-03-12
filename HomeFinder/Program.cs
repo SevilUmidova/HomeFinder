@@ -54,10 +54,16 @@ namespace HomeFinder
             app.UseAuthorization();
           
             app.MapStaticAssets();
+            app.MapGet("/", context =>
+            {
+                context.Response.Redirect("/spa/");
+                return Task.CompletedTask;
+            });
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}")
                 .WithStaticAssets();
+            app.MapFallbackToFile("/spa/{*path:nonfile}", "spa/index.html");
            
 
             app.Run();
