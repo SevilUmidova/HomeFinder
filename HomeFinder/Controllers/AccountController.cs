@@ -1,5 +1,6 @@
-﻿using HomeFinder.Context;
+using HomeFinder.Context;
 using HomeFinder.Models;
+using HomeFinder.Security;
 using Microsoft.AspNetCore.Mvc;
 
 public class AccountController : Controller
@@ -29,66 +30,102 @@ public class AccountController : Controller
         if (model.UserType == "admin")
         {
             var admin = _context.Administrators
-                .FirstOrDefault(a => a.Login == model.Login && a.Password == model.Password);
+                .FirstOrDefault(a => a.Login == model.Login);
 
-            if (admin != null)
-            {
-                HttpContext.Session.SetInt32("AdminId", admin.AdministratorId);
-                HttpContext.Session.SetString("UserRole", "Admin");
-                return RedirectToAction("Index", "Admin");
-            }
-            else
+            if (admin == null || string.IsNullOrEmpty(admin.Password))
             {
                 ViewBag.Error = "Неверный логин или пароль администратора";
                 return View();
             }
+
+            bool ok = PasswordHasher.Verify(model.Password, admin.Password);
+
+            // Поддержка старых «голых» паролей: если совпал в лоб, сразу перехешируем
+            if (!ok && admin.Password == model.Password)
+            {
+                admin.Password = PasswordHasher.Hash(model.Password);
+                _context.SaveChanges();
+                ok = true;
+            }
+
+            if (!ok)
+            {
+                ViewBag.Error = "Неверный логин или пароль администратора";
+                return View();
+            }
+
+            HttpContext.Session.SetInt32("AdminId", admin.AdministratorId);
+            HttpContext.Session.SetString("UserRole", "Admin");
+            return RedirectToAction("Index", "Admin");
         }
         else if (model.UserType == "landlord")
         {
             var user = _context.Users
-                .FirstOrDefault(u => u.Login == model.Login &&
-                                    u.Password == model.Password &&
-                                    u.IsLandlord == true);
+                .FirstOrDefault(u => u.Login == model.Login && u.IsLandlord == true);
 
-            if (user != null)
+            if (user == null || string.IsNullOrEmpty(user.Password))
             {
-                HttpContext.Session.SetInt32("UserId", user.UserId);
-                HttpContext.Session.SetString("UserRole", "Landlord");
-                HttpContext.Session.SetString("UserName", $"{user.FirstName} {user.LastName}");
-
-                var sub = _context.LandlordSubscriptions
-                    .FirstOrDefault(x => x.UserId == user.UserId);
-
-                if (sub != null && sub.Status == "active")
-                    HttpContext.Session.SetString("IsPremium", "1");
-                else
-                    HttpContext.Session.SetString("IsPremium", "0");
-
-                return RedirectToAction("MyApartments", "Apartments");
+                ViewBag.Error = "Неверный логин или пароль владельца";
+                return View();
             }
 
-            ViewBag.Error = "Неверный логин или пароль владельца";
-            return View();
+            bool ok = PasswordHasher.Verify(model.Password, user.Password);
+            if (!ok && user.Password == model.Password)
+            {
+                user.Password = PasswordHasher.Hash(model.Password);
+                _context.SaveChanges();
+                ok = true;
+            }
+
+            if (!ok)
+            {
+                ViewBag.Error = "Неверный логин или пароль владельца";
+                return View();
+            }
+
+            HttpContext.Session.SetInt32("UserId", user.UserId);
+            HttpContext.Session.SetString("UserRole", "Landlord");
+            HttpContext.Session.SetString("UserName", $"{user.FirstName} {user.LastName}");
+
+            var sub = _context.LandlordSubscriptions
+                .FirstOrDefault(x => x.UserId == user.UserId);
+
+            if (sub != null && sub.Status == "active")
+                HttpContext.Session.SetString("IsPremium", "1");
+            else
+                HttpContext.Session.SetString("IsPremium", "0");
+
+            return RedirectToAction("MyApartments", "Apartments");
         }
         else if (model.UserType == "tenant")
         {
             var user = _context.Users
-                .FirstOrDefault(u => u.Login == model.Login &&
-                                    u.Password == model.Password &&
-                                    u.IsTenant == true);
+                .FirstOrDefault(u => u.Login == model.Login && u.IsTenant == true);
 
-            if (user != null)
-            {
-                HttpContext.Session.SetInt32("UserId", user.UserId);
-                HttpContext.Session.SetString("UserRole", "Tenant");
-                HttpContext.Session.SetString("UserName", $"{user.FirstName} {user.LastName}");
-                return RedirectToAction("Index", "Home");
-            }
-            else
+            if (user == null || string.IsNullOrEmpty(user.Password))
             {
                 ViewBag.Error = "Неверный логин или пароль арендатора";
                 return View();
             }
+
+            bool ok = PasswordHasher.Verify(model.Password, user.Password);
+            if (!ok && user.Password == model.Password)
+            {
+                user.Password = PasswordHasher.Hash(model.Password);
+                _context.SaveChanges();
+                ok = true;
+            }
+
+            if (!ok)
+            {
+                ViewBag.Error = "Неверный логин или пароль арендатора";
+                return View();
+            }
+
+            HttpContext.Session.SetInt32("UserId", user.UserId);
+            HttpContext.Session.SetString("UserRole", "Tenant");
+            HttpContext.Session.SetString("UserName", $"{user.FirstName} {user.LastName}");
+            return RedirectToAction("Index", "Home");
         }
 
         ViewBag.Error = "Неверный тип пользователя";
