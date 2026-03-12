@@ -149,38 +149,23 @@
                         }
                     </ul>
 
-                    <!-- RIGHT SIDE: PROFILE AND LOGOUT -->
-                    <ul class="navbar-nav ms-auto">
-                        <li>
-                            @{
-                                var isPremium = Context.Session.GetString("IsPremium") == "1";
-                            }
-
-                            @if (isPremium)
-                            {
-                                <span class="badge rounded-pill text-bg-warning ms-2">⭐ Premium</span>
-                            }
-                        </li>
+                    <!-- RIGHT SIDE: PREMIUM BADGE + LOGOUT / LOGIN -->
+                    <ul class="navbar-nav ms-auto align-items-center">
+                        @{
+                            var isPremium = Context.Session.GetString("IsPremium") == "1";
+                        }
+                        @if (isPremium)
+                        {
+                            <li class="nav-item me-2">
+                                <span class="badge rounded-pill text-bg-warning">⭐ Premium</span>
+                            </li>
+                        }
                         @if (isLoggedIn)
                         {
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-dark" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    👤 @Context.Session.GetString("UserEmail")
+                            <li class="nav-item">
+                                <a class="nav-link text-danger fw-bold" asp-controller="Account" asp-action="Logout">
+                                    Logout
                                 </a>
-                                
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <li>
-                                        <a class="dropdown-item" asp-controller="Account" asp-action="Profile">
-                                            ⚙️ My Profile
-                                        </a>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item text-danger" asp-controller="Account" asp-action="Logout">
-                                            🚪 Logout
-                                        </a>
-                                    </li>
-                                </ul>
                             </li>
                         }
                         else
