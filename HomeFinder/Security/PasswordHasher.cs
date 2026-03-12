@@ -5,32 +5,29 @@ using System.Text;
 namespace HomeFinder.Security
 {
     /// <summary>
-    /// PBKDF2‑хеширование паролей.
-    /// Формат хранения: {iterations}.{saltBase64}.{hashBase64}
+    /// Хеширование паролей через SHA2‑512.
+    /// Формат хранения: HEX‑строка длиной 128 символов (без "0x").
+    /// Совместимо с T‑SQL: CONVERT(varchar(128), HASHBYTES('SHA2_512', password), 2)
     /// </summary>
     public static class PasswordHasher
     {
-        private const int SaltSize = 16;      // 128 bit
-        private const int KeySize = 32;       // 256 bit
-        private const int DefaultIterations = 100_000;
-
         public static string Hash(string password)
         {
             if (password == null) throw new ArgumentNullException(nameof(password));
 
-            using var rng = RandomNumberGenerator.Create();
-            var salt = new byte[SaltSize];
-            rng.GetBytes(salt);
+            using var sha = SHA512.Create();
 
-            using var pbkdf2 = new Rfc2898DeriveBytes(
-                password,
-                salt,
-                DefaultIterations,
-                HashAlgorithmName.SHA256);
+            // SQL Server HASHBYTES для NVARCHAR использует UTF‑16 (Unicode)
+            var bytes = Encoding.Unicode.GetBytes(password);
+            var hash = sha.ComputeHash(bytes);
 
-            var key = pbkdf2.GetBytes(KeySize);
+            var sb = new StringBuilder(hash.Length * 2);
+            foreach (var b in hash)
+            {
+                sb.Append(b.ToString("X2")); // верхний регистр, как CONVERT(..., 2)
+            }
 
-            return $"{DefaultIterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(key)}";
+            return sb.ToString();
         }
 
         public static bool Verify(string password, string stored)
@@ -38,31 +35,8 @@ namespace HomeFinder.Security
             if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(stored))
                 return false;
 
-            var parts = stored.Split('.', 3);
-            if (parts.Length != 3) return false; // не наш формат
-
-            if (!int.TryParse(parts[0], out var iterations) || iterations <= 0)
-                return false;
-
-            byte[] salt, storedKey;
-            try
-            {
-                salt = Convert.FromBase64String(parts[1]);
-                storedKey = Convert.FromBase64String(parts[2]);
-            }
-            catch
-            {
-                return false;
-            }
-
-            using var pbkdf2 = new Rfc2898DeriveBytes(
-                password,
-                salt,
-                iterations,
-                HashAlgorithmName.SHA256);
-
-            var computedKey = pbkdf2.GetBytes(storedKey.Length);
-            return CryptographicOperations.FixedTimeEquals(storedKey, computedKey);
+            var computed = Hash(password);
+            return string.Equals(computed, stored, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
