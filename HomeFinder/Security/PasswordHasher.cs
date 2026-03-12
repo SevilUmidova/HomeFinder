@@ -17,8 +17,9 @@ namespace HomeFinder.Security
 
             using var sha = SHA512.Create();
 
-            // SQL Server HASHBYTES для NVARCHAR использует UTF‑16 (Unicode)
-            var bytes = Encoding.Unicode.GetBytes(password);
+            // SQL Server HASHBYTES('SHA2_512', <varchar>) работает с однобайтной кодировкой.
+            // Для паролей в ASCII‑диапазоне этого достаточно и даёт совпадение с T‑SQL.
+            var bytes = Encoding.ASCII.GetBytes(password);
             var hash = sha.ComputeHash(bytes);
 
             var sb = new StringBuilder(hash.Length * 2);
