@@ -33,6 +33,12 @@
                         <div class="text-muted small mb-1">
                             ID: @x.ApartmentId
                         </div>
+                        <div class="text-muted small mb-1">
+                            @if (x.Price.HasValue)
+                            {
+                                @($"{x.Price.Value:F0} UZS")
+                            }
+                        </div>
                         <div class="small fw-semibold mt-auto">
                             Просмотров: @x.Views
                         </div>

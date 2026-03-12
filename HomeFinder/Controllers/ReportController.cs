@@ -20,22 +20,32 @@ namespace HomeFinder.Controllers
             return View();
         }
 
-        public IActionResult MostViewedApartments(int top = 5, string? dateFrom = null, string? dateTo = null)
+        public IActionResult MostViewedApartments(
+            int top = 5,
+            string? dateFrom = null,
+            string? dateTo = null,
+            decimal? priceMin = null,
+            decimal? priceMax = null)
         {
             top = ClampTop(top);
             var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
 
-            var vm = BuildMostViewedApartmentsVm(top, from, to);
+            var vm = BuildMostViewedApartmentsVm(top, from, to, priceMin, priceMax);
             return View(vm);
         }
 
         [HttpGet]
-        public IActionResult MostViewedApartmentsData(int top = 5, string? dateFrom = null, string? dateTo = null)
+        public IActionResult MostViewedApartmentsData(
+            int top = 5,
+            string? dateFrom = null,
+            string? dateTo = null,
+            decimal? priceMin = null,
+            decimal? priceMax = null)
         {
             top = ClampTop(top);
             var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
 
-            var vm = BuildMostViewedApartmentsVm(top, from, to);
+            var vm = BuildMostViewedApartmentsVm(top, from, to, priceMin, priceMax);
             return PartialView("_MostViewedApartmentsDataResponse", vm);
         }
 
@@ -97,7 +107,12 @@ namespace HomeFinder.Controllers
             };
         }
 
-        private MostViewedApartmentsReportVm BuildMostViewedApartmentsVm(int top, DateTime fromDate, DateTime toDate)
+        private MostViewedApartmentsReportVm BuildMostViewedApartmentsVm(
+            int top,
+            DateTime fromDate,
+            DateTime toDate,
+            decimal? priceMin,
+            decimal? priceMax)
         {
             var periodStart = fromDate.Date;
             var periodEnd = toDate.Date.AddDays(1);
@@ -123,9 +138,20 @@ namespace HomeFinder.Controllers
                 };
             }
 
-            var apartments = _context.Apartments
+            var apartmentsQuery = _context.Apartments
                 .AsNoTracking()
-                .Where(a => apartmentIds.Contains(a.ApartmentId))
+                .Where(a => apartmentIds.Contains(a.ApartmentId));
+
+            if (priceMin.HasValue)
+            {
+                apartmentsQuery = apartmentsQuery.Where(a => a.Price == null || a.Price >= priceMin.Value);
+            }
+            if (priceMax.HasValue)
+            {
+                apartmentsQuery = apartmentsQuery.Where(a => a.Price == null || a.Price <= priceMax.Value);
+            }
+
+            var apartments = apartmentsQuery
                 .Select(a => new MostViewedApartmentsReportVm.Row
                 {
                     ApartmentId = a.ApartmentId,

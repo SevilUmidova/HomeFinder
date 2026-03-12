@@ -32,6 +32,14 @@
                 <input id="dateTo" name="dateTo" type="text" class="form-control form-control-sm" value="@Model.DateTo.ToString("dd.MM.yyyy")" placeholder="дд.мм.гггг" style="width:140px;" autocomplete="off" />
             </div>
             <div>
+                <label for="priceMin" class="form-label mb-1">Цена от</label>
+                <input id="priceMin" name="priceMin" type="number" class="form-control form-control-sm" style="width:130px;" />
+            </div>
+            <div>
+                <label for="priceMax" class="form-label mb-1">Цена до</label>
+                <input id="priceMax" name="priceMax" type="number" class="form-control form-control-sm" style="width:130px;" />
+            </div>
+            <div>
                 <label for="districtFilter" class="form-label mb-1">Район</label>
                 <select id="districtFilter" class="form-select form-select-sm" style="min-width: 180px;">
                     <option value="">Все районы</option>
@@ -246,6 +254,8 @@
             const topEl = document.getElementById('topInput');
             const dfEl = document.getElementById('dateFrom');
             const dtEl = document.getElementById('dateTo');
+            const priceMinEl = document.getElementById('priceMin');
+            const priceMaxEl = document.getElementById('priceMax');
 
             const topValue = Number(topEl?.value || 5);
             const top = Number.isFinite(topValue) ? Math.min(50, Math.max(1, topValue)) : 5;
@@ -266,7 +276,21 @@
                 return;
             }
 
-            const url = `/Report/MostViewedApartmentsData?top=${encodeURIComponent(top)}&dateFrom=${encodeURIComponent(fromText)}&dateTo=${encodeURIComponent(toText)}`;
+            const priceMin = priceMinEl?.value ? Number(priceMinEl.value) : null;
+            const priceMax = priceMaxEl?.value ? Number(priceMaxEl.value) : null;
+
+            const params = new URLSearchParams();
+            params.set('top', String(top));
+            params.set('dateFrom', fromText);
+            params.set('dateTo', toText);
+            if (priceMin !== null && !Number.isNaN(priceMin)) {
+                params.set('priceMin', String(priceMin));
+            }
+            if (priceMax !== null && !Number.isNaN(priceMax)) {
+                params.set('priceMax', String(priceMax));
+            }
+
+            const url = `/Report/MostViewedApartmentsData?${params.toString()}`;
             const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!resp.ok) {
                 setError('Не удалось загрузить данные отчёта.');
