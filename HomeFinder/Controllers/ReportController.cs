@@ -25,12 +25,13 @@ namespace HomeFinder.Controllers
             string? dateFrom = null,
             string? dateTo = null,
             decimal? priceMin = null,
-            decimal? priceMax = null)
+            decimal? priceMax = null,
+            string? district = null)
         {
             top = ClampTop(top);
             var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
 
-            var vm = BuildMostViewedApartmentsVm(top, from, to, priceMin, priceMax);
+            var vm = BuildMostViewedApartmentsVm(top, from, to, priceMin, priceMax, district);
             return View(vm);
         }
 
@@ -40,12 +41,13 @@ namespace HomeFinder.Controllers
             string? dateFrom = null,
             string? dateTo = null,
             decimal? priceMin = null,
-            decimal? priceMax = null)
+            decimal? priceMax = null,
+            string? district = null)
         {
             top = ClampTop(top);
             var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
 
-            var vm = BuildMostViewedApartmentsVm(top, from, to, priceMin, priceMax);
+            var vm = BuildMostViewedApartmentsVm(top, from, to, priceMin, priceMax, district);
             return PartialView("_MostViewedApartmentsDataResponse", vm);
         }
 
@@ -145,35 +147,49 @@ namespace HomeFinder.Controllers
             DateTime fromDate,
             DateTime toDate,
             decimal? priceMin,
-            decimal? priceMax)
+            decimal? priceMax,
+            string? district)
         {
             var periodStart = fromDate.Date;
             var periodEnd = toDate.Date.AddDays(1);
 
-            var topByViews = _context.ApartmentViewLogs
+            var viewsByApartment = _context.ApartmentViewLogs
                 .AsNoTracking()
                 .Where(v => v.ViewedAt >= periodStart && v.ViewedAt < periodEnd)
                 .GroupBy(v => v.ApartmentId)
                 .Select(g => new { ApartmentId = g.Key, Views = g.Count() })
-                .OrderByDescending(x => x.Views)
-                .Take(top)
                 .ToList();
 
-            var apartmentIds = topByViews.Select(x => x.ApartmentId).ToList();
-            if (apartmentIds.Count == 0)
+            var allViewedApartmentIds = viewsByApartment.Select(x => x.ApartmentId).ToList();
+            if (allViewedApartmentIds.Count == 0)
             {
                 return new MostViewedApartmentsReportVm
                 {
                     Top = top,
                     DateFrom = fromDate,
                     DateTo = toDate,
+                    SelectedDistrict = string.IsNullOrWhiteSpace(district) ? null : district.Trim(),
                     Items = new List<MostViewedApartmentsReportVm.Row>()
                 };
             }
 
+            // Список районов строим по всем квартирам, которые имели просмотры за период
+            var districts = _context.Addresses
+                .AsNoTracking()
+                .Where(ad => ad.ApartmentId != null &&
+                             allViewedApartmentIds.Contains(ad.ApartmentId.Value) &&
+                             ad.District != null &&
+                             ad.District != "")
+                .Select(ad => ad.District!)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+
+            var selectedDistrict = string.IsNullOrWhiteSpace(district) ? null : district.Trim();
+
             var apartmentsQuery = _context.Apartments
                 .AsNoTracking()
-                .Where(a => apartmentIds.Contains(a.ApartmentId));
+                .Where(a => allViewedApartmentIds.Contains(a.ApartmentId));
 
             if (priceMin.HasValue)
             {
@@ -182,6 +198,10 @@ namespace HomeFinder.Controllers
             if (priceMax.HasValue)
             {
                 apartmentsQuery = apartmentsQuery.Where(a => a.Price == null || a.Price <= priceMax.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(selectedDistrict))
+            {
+                apartmentsQuery = apartmentsQuery.Where(a => a.Addresses.Any(ad => ad.District != null && ad.District == selectedDistrict));
             }
 
             var apartments = apartmentsQuery
@@ -198,18 +218,23 @@ namespace HomeFinder.Controllers
                 })
                 .ToList();
 
-            var viewCounts = topByViews.ToDictionary(x => x.ApartmentId, x => x.Views);
+            var viewCounts = viewsByApartment.ToDictionary(x => x.ApartmentId, x => x.Views);
             foreach (var row in apartments)
             {
                 row.Views = viewCounts.TryGetValue(row.ApartmentId, out var c) ? c : 0;
             }
-            var items = apartments.OrderByDescending(r => r.Views).ToList();
+            var items = apartments
+                .OrderByDescending(r => r.Views)
+                .Take(top)
+                .ToList();
 
             return new MostViewedApartmentsReportVm
             {
                 Top = top,
                 DateFrom = fromDate,
                 DateTo = toDate,
+                SelectedDistrict = selectedDistrict,
+                Districts = districts,
                 Items = items
             };
         }

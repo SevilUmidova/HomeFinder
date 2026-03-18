@@ -7,6 +7,9 @@ namespace HomeFinder.Models.Reports
         public DateTime DateFrom { get; set; }
         public DateTime DateTo { get; set; }
 
+        public string? SelectedDistrict { get; set; }
+        public List<string> Districts { get; set; } = new();
+
         public List<Row> Items { get; set; } = new();
 
         public class Row

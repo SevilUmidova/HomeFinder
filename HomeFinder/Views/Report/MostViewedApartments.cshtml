@@ -43,13 +43,9 @@
                 <label for="districtFilter" class="form-label mb-1">Район</label>
                 <select id="districtFilter" class="form-select form-select-sm" style="min-width: 180px;">
                     <option value="">Все районы</option>
-                    @foreach (var d in Model.Items
-                        .Select(x => x.District)
-                        .Where(x => !string.IsNullOrWhiteSpace(x))
-                        .Distinct()
-                        .OrderBy(x => x))
+                    @foreach (var d in Model.Districts)
                     {
-                        <option value="@d">@d</option>
+                        <option value="@d" selected="@(d == Model.SelectedDistrict)">@d</option>
                     }
                 </select>
             </div>
@@ -174,33 +170,8 @@
             const select = document.getElementById('districtFilter');
             if (!select) return;
 
-            const previousValue = select.value;
-
-            const districts = Array.from(new Set(
-                (items || [])
-                    .map(x => (x.district || '').trim())
-                    .filter(x => x !== '')
-            )).sort((a, b) => a.localeCompare(b));
-
-            select.innerHTML = '';
-
-            const allOpt = document.createElement('option');
-            allOpt.value = '';
-            allOpt.textContent = 'Все районы';
-            select.appendChild(allOpt);
-
-            districts.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d;
-                opt.textContent = d;
-                select.appendChild(opt);
-            });
-
-            if (previousValue && districts.includes(previousValue)) {
-                select.value = previousValue;
-            } else {
-                select.value = '';
-            }
+            // Опции районов теперь приходят с сервера (чтобы фильтр работал до Take(top)).
+            // Поэтому тут ничего не пересобираем.
         }
 
         function applyDistrictFilterToTable(selectedDistrict) {
@@ -230,15 +201,10 @@
             }
 
             currentItems = payload.items || [];
-            updateDistrictFilterOptions(currentItems);
 
             const select = document.getElementById('districtFilter');
             const selected = select ? (select.value || '') : '';
-            const filtered = !selected
-                ? currentItems
-                : currentItems.filter(x => (x.district || '').trim() === selected);
-
-            renderChartForItems(filtered);
+            renderChartForItems(currentItems);
             applyDistrictFilterToTable(selected);
         }
 
@@ -278,6 +244,7 @@
 
             const priceMin = priceMinEl?.value ? Number(priceMinEl.value) : null;
             const priceMax = priceMaxEl?.value ? Number(priceMaxEl.value) : null;
+            const district = (document.getElementById('districtFilter')?.value || '').trim();
 
             const params = new URLSearchParams();
             params.set('top', String(top));
@@ -288,6 +255,9 @@
             }
             if (priceMax !== null && !Number.isNaN(priceMax)) {
                 params.set('priceMax', String(priceMax));
+            }
+            if (district) {
+                params.set('district', district);
             }
 
             const url = `/Report/MostViewedApartmentsData?${params.toString()}`;
@@ -330,14 +300,8 @@
         const districtSelect = document.getElementById('districtFilter');
         if (districtSelect) {
             districtSelect.addEventListener('change', function () {
-                const selected = this.value || '';
-                const items = currentItems || [];
-                const filtered = !selected
-                    ? items
-                    : items.filter(x => (x.district || '').trim() === selected);
-
-                renderChartForItems(filtered);
-                applyDistrictFilterToTable(selected);
+                // Теперь район — серверный фильтр. Перезагружаем блоки отчёта (без перезагрузки страницы).
+                reloadReport();
             });
         }
 
