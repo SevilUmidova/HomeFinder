@@ -6,3 +6,4 @@ HomeFinder/bin
 HomeFinder/.vs
 HomeFinder/SeedApartmentViewLogs.sql
 HomeFinder/CreateApartmentViewLogTable.sql
+/HomeFinder.Frontend/node_modules
