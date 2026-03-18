@@ -194,7 +194,13 @@
 
 @section Scripts {
 
+<form id="__af" method="post" style="display:none">
+    @Html.AntiForgeryToken()
+</form>
+
 <script>
+    const antiforgeryToken = document.querySelector('#__af input[name="__RequestVerificationToken"]')?.value;
+
     const apartments = @Html.Raw(JsonSerializer.Serialize(
         Model.Select(a => new {
             id = a.ApartmentId,
@@ -305,7 +311,8 @@
         fetch('@Url.Action("FilterByArea", "Home")', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...(antiforgeryToken ? { 'RequestVerificationToken': antiforgeryToken } : {})
             },
             body: JSON.stringify({ polygon })
         })
