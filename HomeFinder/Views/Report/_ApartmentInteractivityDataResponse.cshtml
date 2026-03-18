@@ -6,10 +6,37 @@
     string pct(double v) => (v * 100).ToString("0.##", inv) + "%";
 }
 
-<div class="row g-3">
-    <div class="col-lg-7">
-        <div class="card shadow-sm">
-            <div class="card-body">
+<div class="card shadow-sm">
+    <div class="card-body">
+        <ul class="nav nav-tabs" id="interactivityTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active"
+                        id="tab-top"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-top-pane"
+                        type="button"
+                        role="tab"
+                        aria-controls="tab-top-pane"
+                        aria-selected="true">
+                    Топ объявлений
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link"
+                        id="tab-compare"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-compare-pane"
+                        type="button"
+                        role="tab"
+                        aria-controls="tab-compare-pane"
+                        aria-selected="false">
+                    Сравнения
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content pt-3" id="interactivityTabContent">
+            <div class="tab-pane fade show active" id="tab-top-pane" role="tabpanel" aria-labelledby="tab-top" tabindex="0">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <h5 class="mb-0">Топ объявлений по конверсии</h5>
                     <div class="text-muted small">минимум 10 просмотров для сортировки</div>
@@ -77,28 +104,36 @@
                     </div>
                 }
             </div>
-        </div>
-    </div>
 
-    <div class="col-lg-5">
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h5 class="mb-2">Сравнение по диапазонам цены</h5>
-                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByPriceRange)
-            </div>
-        </div>
+            <div class="tab-pane fade" id="tab-compare-pane" role="tabpanel" aria-labelledby="tab-compare" tabindex="0">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="mb-2">Сравнение по диапазонам цены</h5>
+                                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByPriceRange)
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h5 class="mb-2">Сравнение по району</h5>
-                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByDistrict)
-            </div>
-        </div>
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="mb-2">Сравнение по району</h5>
+                                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByDistrict)
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="mb-2">Сравнение по типу (комнатность)</h5>
-                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByRooms)
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="mb-2">Сравнение по типу (комнатность)</h5>
+                                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByRooms)
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
