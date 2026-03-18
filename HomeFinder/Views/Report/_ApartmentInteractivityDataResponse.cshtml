@@ -1,0 +1,106 @@
+@model HomeFinder.Models.Reports.ApartmentInteractivityReportVm
+@using System.Globalization
+
+@{
+    var inv = CultureInfo.InvariantCulture;
+    string pct(double v) => (v * 100).ToString("0.##", inv) + "%";
+}
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h5 class="mb-0">Топ объявлений по конверсии</h5>
+                    <div class="text-muted small">минимум 10 просмотров для сортировки</div>
+                </div>
+
+                @if (Model.Items.Count == 0)
+                {
+                    <div class="alert alert-info mb-0">Нет данных за выбранный период.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Квартира</th>
+                                    <th class="text-end">Просмотры</th>
+                                    <th class="text-end">Обращения</th>
+                                    <th class="text-end">Конверсия</th>
+                                    <th class="text-end">Избранное</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @{
+                                var i = 0;
+                            }
+                            @foreach (var r in Model.Items)
+                            {
+                                i++;
+                                <tr>
+                                    <td>@i</td>
+                                    <td>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            @if (!string.IsNullOrWhiteSpace(r.PhotoPath))
+                                            {
+                                                <img src="@r.PhotoPath" style="width:44px;height:44px;object-fit:cover;border-radius:8px;" />
+                                            }
+                                            <div>
+                                                <div class="fw-semibold">
+                                                    <a href="@r.DetailsUrl">#@r.ApartmentId</a>
+                                                    @if (r.Price.HasValue)
+                                                    {
+                                                        <span class="text-muted">· @r.Price.Value.ToString("n0", inv)</span>
+                                                    }
+                                                </div>
+                                                <div class="text-muted small">
+                                                    @(string.IsNullOrWhiteSpace(r.District) ? "" : r.District)
+                                                    @if (!string.IsNullOrWhiteSpace(r.StreetAddress))
+                                                    {
+                                                        <span>· @r.StreetAddress @r.BuildingNumber</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">@r.Views</td>
+                                    <td class="text-end">@r.Inquiries</td>
+                                    <td class="text-end fw-semibold">@pct(r.ConversionRate)</td>
+                                    <td class="text-end">@r.FavoritesTotal</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="mb-2">Сравнение по диапазонам цены</h5>
+                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByPriceRange)
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="mb-2">Сравнение по району</h5>
+                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByDistrict)
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-2">Сравнение по типу (комнатность)</h5>
+                @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByRooms)
+            </div>
+        </div>
+    </div>
+</div>
+
