@@ -38,14 +38,11 @@ public class AccountController : Controller
                 return View();
             }
 
-            bool ok = PasswordHasher.Verify(model.Password, admin.Password);
-
-            // Поддержка старых «голых» паролей: если совпал в лоб, сразу перехешируем
-            if (!ok && admin.Password == model.Password)
+            bool ok = PasswordHasher.VerifyAndUpgrade(model.Password, admin.Password, out var upgradedHash);
+            if (ok && !string.IsNullOrEmpty(upgradedHash))
             {
-                admin.Password = PasswordHasher.Hash(model.Password);
+                admin.Password = upgradedHash;
                 _context.SaveChanges();
-                ok = true;
             }
 
             if (!ok)
@@ -69,12 +66,11 @@ public class AccountController : Controller
                 return View();
             }
 
-            bool ok = PasswordHasher.Verify(model.Password, user.Password);
-            if (!ok && user.Password == model.Password)
+            bool ok = PasswordHasher.VerifyAndUpgrade(model.Password, user.Password, out var upgradedHash);
+            if (ok && !string.IsNullOrEmpty(upgradedHash))
             {
-                user.Password = PasswordHasher.Hash(model.Password);
+                user.Password = upgradedHash;
                 _context.SaveChanges();
-                ok = true;
             }
 
             if (!ok)
@@ -108,12 +104,11 @@ public class AccountController : Controller
                 return View();
             }
 
-            bool ok = PasswordHasher.Verify(model.Password, user.Password);
-            if (!ok && user.Password == model.Password)
+            bool ok = PasswordHasher.VerifyAndUpgrade(model.Password, user.Password, out var upgradedHash);
+            if (ok && !string.IsNullOrEmpty(upgradedHash))
             {
-                user.Password = PasswordHasher.Hash(model.Password);
+                user.Password = upgradedHash;
                 _context.SaveChanges();
-                ok = true;
             }
 
             if (!ok)
