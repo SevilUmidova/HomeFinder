@@ -15,6 +15,16 @@ namespace HomeFinder.Controllers
             _context = context;
         }
 
+        private bool IsLoggedIn()
+        {
+            return !string.IsNullOrWhiteSpace(HttpContext.Session.GetString("UserRole"));
+        }
+
+        private bool IsAdmin()
+        {
+            return HttpContext.Session.GetString("UserRole") == "Admin";
+        }
+
         public IActionResult Index()
         {
             return View();
@@ -109,6 +119,13 @@ namespace HomeFinder.Controllers
             string? apartmentType = null,
             string granularity = "daily")
         {
+            if (!IsLoggedIn())
+                return RedirectToAction("Login", "Account");
+
+            // Админам этот отчёт скрыт по требованиям.
+            if (IsAdmin())
+                return RedirectToAction("Index");
+
             var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
             var normalizedGranularity = NormalizeGranularity(granularity);
 
@@ -125,11 +142,128 @@ namespace HomeFinder.Controllers
             string? apartmentType = null,
             string granularity = "daily")
         {
+            if (!IsLoggedIn())
+                return RedirectToAction("Login", "Account");
+
+            // Админам этот отчёт скрыт по требованиям.
+            if (IsAdmin())
+                return RedirectToAction("Index");
+
             var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
             var normalizedGranularity = NormalizeGranularity(granularity);
 
             var vm = BuildApartmentPriceAnalyticsVm(from, to, district, rooms, apartmentType, normalizedGranularity);
             return PartialView("_ApartmentPriceAnalyticsDataResponse", vm);
+        }
+
+        // ---------------------------
+        // Админский отчёт: активные арендаторы
+        // ---------------------------
+        public IActionResult MostActiveTenants(
+            int top = 20,
+            string? dateFrom = null,
+            string? dateTo = null)
+        {
+            if (!IsLoggedIn())
+                return RedirectToAction("Login", "Account");
+
+            if (!IsAdmin())
+                return RedirectToAction("Index");
+
+            top = ClampTop(top);
+            var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
+
+            var vm = BuildMostActiveTenantsVm(top, from, to);
+            return View(vm);
+        }
+
+        [HttpGet]
+        public IActionResult MostActiveTenantsData(
+            int top = 20,
+            string? dateFrom = null,
+            string? dateTo = null)
+        {
+            if (!IsLoggedIn())
+                return RedirectToAction("Login", "Account");
+
+            if (!IsAdmin())
+                return RedirectToAction("Index");
+
+            top = ClampTop(top);
+            var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
+
+            var vm = BuildMostActiveTenantsVm(top, from, to);
+            return PartialView("_MostActiveTenantsTable", vm);
+        }
+
+        private MostActiveTenantsReportVm BuildMostActiveTenantsVm(int top, DateTime fromDate, DateTime toDate)
+        {
+            var periodStart = fromDate.Date;
+            var periodEnd = toDate.Date.AddDays(1);
+
+            // Считаем количество входов в аккаунт (по логам логина) за период.
+            var grouped = _context.UserLoginLogs
+                .AsNoTracking()
+                .Where(l =>
+                    l.UserId != null &&
+                    l.LoginTime != null &&
+                    l.LoginTime >= periodStart &&
+                    l.LoginTime < periodEnd &&
+                    l.User != null &&
+                    l.User.IsTenant == true)
+                .GroupBy(l => l.UserId!.Value)
+                .Select(g => new
+                {
+                    UserId = g.Key,
+                    LoginCount = g.Count(),
+                    LastLoginTime = g.Max(x => x.LoginTime)
+                })
+                .OrderByDescending(x => x.LoginCount)
+                .Take(top)
+                .ToList();
+
+            var userIds = grouped.Select(x => x.UserId).ToList();
+
+            var users = _context.Users
+                .AsNoTracking()
+                .Where(u => userIds.Contains(u.UserId) && u.IsTenant == true)
+                .Select(u => new
+                {
+                    u.UserId,
+                    u.Login,
+                    u.FirstName,
+                    u.LastName
+                })
+                .ToList();
+
+            var userDict = users.ToDictionary(u => u.UserId, u => u);
+
+            var items = grouped.Select(g =>
+            {
+                userDict.TryGetValue(g.UserId, out var u);
+                var name = u == null
+                    ? null
+                    : string.Join(" ", new[] { u.FirstName, u.LastName }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                if (string.IsNullOrWhiteSpace(name))
+                    name = u?.Login;
+
+                return new MostActiveTenantsReportVm.Row
+                {
+                    UserId = g.UserId,
+                    Login = u?.Login ?? $"User {g.UserId}",
+                    TenantName = name ?? $"User {g.UserId}",
+                    LoginCount = g.LoginCount,
+                    LastLoginTime = g.LastLoginTime
+                };
+            }).ToList();
+
+            return new MostActiveTenantsReportVm
+            {
+                Top = top,
+                DateFrom = fromDate,
+                DateTo = toDate,
+                Items = items
+            };
         }
 
         private MostViewedDistrictsReportVm BuildMostViewedDistrictsVm(int top, DateTime fromDate, DateTime toDate)

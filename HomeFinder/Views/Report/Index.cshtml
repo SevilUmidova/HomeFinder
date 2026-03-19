@@ -1,5 +1,7 @@
 @{
     ViewData["Title"] = "Reports";
+    var userRole = Context.Session.GetString("UserRole");
+    bool isAdmin = userRole == "Admin";
 }
 
 <div class="container py-4">
@@ -51,17 +53,37 @@
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <h5 class="card-title">💰 Price analytics</h5>
-                    <p class="card-text text-muted">Средняя цена по районам и тренды по времени.</p>
+        @if (!isAdmin)
+        {
+            <div class="col-md-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">💰 Price analytics</h5>
+                        <p class="card-text text-muted">Средняя цена по районам и тренды по времени.</p>
 
-                    <form method="get" asp-controller="Report" asp-action="ApartmentPriceAnalytics" class="d-flex gap-2">
-                        <button class="btn btn-primary">Open</button>
-                    </form>
+                        <form method="get" asp-controller="Report" asp-action="ApartmentPriceAnalytics" class="d-flex gap-2">
+                            <button class="btn btn-primary">Open</button>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
+        }
+
+        @if (isAdmin)
+        {
+            <div class="col-md-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">👥 Самые активные арендаторы</h5>
+                        <p class="card-text text-muted">Топ арендаторов по количеству входов в аккаунт.</p>
+
+                        <form method="get" asp-controller="Report" asp-action="MostActiveTenants" class="d-flex gap-2">
+                            <input type="number" name="top" class="form-control" value="20" min="1" max="50" />
+                            <button class="btn btn-primary">Open</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>
