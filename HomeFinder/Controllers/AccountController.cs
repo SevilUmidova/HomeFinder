@@ -120,6 +120,15 @@ public class AccountController : Controller
             HttpContext.Session.SetInt32("UserId", user.UserId);
             HttpContext.Session.SetString("UserRole", "Tenant");
             HttpContext.Session.SetString("UserName", $"{user.FirstName} {user.LastName}");
+
+            // Для админского отчёта фиксируем вход арендатора в лог авторизации.
+            _context.UserLoginLogs.Add(new UserLoginLog
+            {
+                UserId = user.UserId,
+                LoginTime = System.DateTime.Now
+            });
+            _context.SaveChanges();
+
             return RedirectToAction("Index", "Home");
         }
 

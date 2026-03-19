@@ -7,6 +7,10 @@
 <div class="container py-4">
     <div class="mb-4">
         <h2 class="mb-1">📊 Reports</h2>
+        @if (isAdmin)
+        {
+            <div class="text-muted small mb-2">Administrator reports</div>
+        }
         <div class="text-muted">Выбери отчёт и количество строк (top).</div>
     </div>
 
