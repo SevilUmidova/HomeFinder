@@ -224,6 +224,32 @@ namespace HomeFinder.Controllers
 
             var userIds = grouped.Select(x => x.UserId).ToList();
 
+            // Сумма денег по аппойнтментам (суммируем Price квартир, на которые были записи),
+            // в пределах того же периода, что и фильтр отчёта.
+            var appointmentSums = _context.Appointments
+                .AsNoTracking()
+                .Where(a =>
+                    a.UserId != null &&
+                    userIds.Contains(a.UserId.Value) &&
+                    a.DateTime != null &&
+                    a.DateTime >= periodStart &&
+                    a.DateTime < periodEnd &&
+                    a.ApartmentId != null)
+                .Join(
+                    _context.Apartments.AsNoTracking(),
+                    a => a.ApartmentId,
+                    ap => ap.ApartmentId,
+                    (a, ap) => new
+                    {
+                        UserId = a.UserId!.Value,
+                        Price = ap.Price ?? 0m
+                    })
+                .GroupBy(x => x.UserId)
+                .Select(g => new { UserId = g.Key, AppointmentSum = g.Sum(x => x.Price) })
+                .ToList();
+
+            var appointmentSumDict = appointmentSums.ToDictionary(x => x.UserId, x => x.AppointmentSum);
+
             var users = _context.Users
                 .AsNoTracking()
                 .Where(u => userIds.Contains(u.UserId) && u.IsTenant == true)
@@ -253,7 +279,8 @@ namespace HomeFinder.Controllers
                     Login = u?.Login ?? $"User {g.UserId}",
                     TenantName = name ?? $"User {g.UserId}",
                     LoginCount = g.LoginCount,
-                    LastLoginTime = g.LastLoginTime
+                    LastLoginTime = g.LastLoginTime,
+                    AppointmentSum = appointmentSumDict.TryGetValue(g.UserId, out var sum) ? sum : 0m
                 };
             }).ToList();
 

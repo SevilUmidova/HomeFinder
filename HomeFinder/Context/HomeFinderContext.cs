@@ -190,6 +190,8 @@ public partial class HomeFinderContext : DbContext
                 .HasColumnType("datetime")
                 .HasColumnName("date_time");
 
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
             entity.HasOne(d => d.Address).WithMany(p => p.Appointments)
                 .HasForeignKey(d => d.AddressId)
                 .HasConstraintName("FK__Appointme__addre__70DDC3D8");
@@ -197,6 +199,9 @@ public partial class HomeFinderContext : DbContext
             entity.HasOne(d => d.Apartment).WithMany(p => p.Appointments)
                 .HasForeignKey(d => d.ApartmentId)
                 .HasConstraintName("FK__Appointme__apart__6FE99F9F");
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId);
         });
 
         modelBuilder.Entity<Favorite>(entity =>

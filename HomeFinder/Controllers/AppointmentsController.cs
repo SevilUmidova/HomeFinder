@@ -1,4 +1,4 @@
-﻿using HomeFinder.Context;
+using HomeFinder.Context;
 using HomeFinder.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -69,7 +69,8 @@ namespace HomeFinder.Controllers
             {
                 ApartmentId = model.ApartmentId,
                 AddressId = model.AddressId,
-                DateTime = model.DateTime
+                DateTime = model.DateTime,
+                UserId = HttpContext.Session.GetInt32("UserId")
             };
 
             _context.Appointments.Add(appointment);
