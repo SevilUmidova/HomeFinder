@@ -101,6 +101,37 @@ namespace HomeFinder.Controllers
             return PartialView("_ApartmentInteractivityDataResponse", vm);
         }
 
+        public IActionResult ApartmentPriceAnalytics(
+            string? dateFrom = null,
+            string? dateTo = null,
+            string? district = null,
+            int? rooms = null,
+            string? apartmentType = null,
+            string granularity = "daily")
+        {
+            var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
+            var normalizedGranularity = NormalizeGranularity(granularity);
+
+            var vm = BuildApartmentPriceAnalyticsVm(from, to, district, rooms, apartmentType, normalizedGranularity);
+            return View(vm);
+        }
+
+        [HttpGet]
+        public IActionResult ApartmentPriceAnalyticsData(
+            string? dateFrom = null,
+            string? dateTo = null,
+            string? district = null,
+            int? rooms = null,
+            string? apartmentType = null,
+            string granularity = "daily")
+        {
+            var (from, to) = NormalizePeriod(ParseDate(dateFrom), ParseDate(dateTo));
+            var normalizedGranularity = NormalizeGranularity(granularity);
+
+            var vm = BuildApartmentPriceAnalyticsVm(from, to, district, rooms, apartmentType, normalizedGranularity);
+            return PartialView("_ApartmentPriceAnalyticsDataResponse", vm);
+        }
+
         private MostViewedDistrictsReportVm BuildMostViewedDistrictsVm(int top, DateTime fromDate, DateTime toDate)
         {
             var periodStart = fromDate.Date;
@@ -372,6 +403,187 @@ namespace HomeFinder.Controllers
                 ByDistrict = byDistrict,
                 ByRooms = byRooms
             };
+        }
+
+        private ApartmentPriceAnalyticsReportVm BuildApartmentPriceAnalyticsVm(
+            DateTime fromDate,
+            DateTime toDate,
+            string? district,
+            int? rooms,
+            string? apartmentType,
+            string granularity)
+        {
+            var periodStart = fromDate.Date;
+            var periodEnd = toDate.Date.AddDays(1);
+
+            var normalizedDistrict = string.IsNullOrWhiteSpace(district) ? null : district.Trim();
+            var normalizedType = string.IsNullOrWhiteSpace(apartmentType) ? null : apartmentType.Trim().ToLowerInvariant();
+            var normalizedRooms = rooms;
+
+            // Готовим срез просмотров по периоду — именно они дают нам "время" для тренда.
+            // Цена берётся из текущего Apartment.price (истории цен нет).
+            var viewRows = _context.ApartmentViewLogs
+                .AsNoTracking()
+                .Where(v => v.ViewedAt >= periodStart && v.ViewedAt < periodEnd)
+                .Select(v => new
+                {
+                    v.ApartmentId,
+                    v.ViewedAt,
+                    Price = v.Apartment.Price,
+                    Rooms = v.Apartment.Rooms,
+                    District = v.Apartment.Addresses
+                        .OrderBy(ad => ad.AddressId)
+                        .Select(ad => ad.District)
+                        .FirstOrDefault()
+                })
+                .ToList();
+
+            var priced = viewRows
+                .Where(x => x.Price != null)
+                .Select(x => new
+                {
+                    x.ApartmentId,
+                    x.ViewedAt,
+                    Price = x.Price!.Value,
+                    x.Rooms,
+                    District = x.District
+                })
+                .ToList();
+
+            // Опции районов строим по тем же фильтрам, кроме selectedDistrict (чтобы выбор показывал реальные варианты)
+            var apartmentsSnapshots = priced
+                .GroupBy(x => x.ApartmentId)
+                .Select(g => g.First())
+                .Where(x => ApartmentTypeMatches(x.Rooms, normalizedRooms, normalizedType))
+                .ToList();
+
+            var availableDistricts = apartmentsSnapshots
+                .Select(x => x.District)
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .Distinct()
+                .OrderBy(x => x!)
+                .Select(x => x!)
+                .ToList();
+
+            // byDistrict и тренды считаем по отфильтрованным просмотрам (с выбранным районом)
+            var filteredViewRows = priced
+                .Where(x =>
+                    ApartmentTypeMatches(x.Rooms, normalizedRooms, normalizedType) &&
+                    (normalizedDistrict == null ||
+                        string.Equals((string?)x.District, normalizedDistrict, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            var distinctApartmentsFiltered = filteredViewRows
+                .GroupBy(x => x.ApartmentId)
+                .Select(g => g.First())
+                .ToList();
+
+            var avgByDistrict = distinctApartmentsFiltered
+                .Where(x => !string.IsNullOrWhiteSpace(x.District))
+                .GroupBy(x => x.District!)
+                .Select(g => new ApartmentPriceAnalyticsReportVm.AverageByDistrictRow
+                {
+                    District = g.Key,
+                    AveragePrice = g.Average(x => x.Price),
+                    ApartmentsCount = g.Count()
+                })
+                .OrderByDescending(x => x.AveragePrice)
+                .ToList();
+
+            // Тренд по времени: bucket => средняя цена по просмотрам
+            var trend = filteredViewRows
+                .Select(x =>
+                {
+                    var bucketStart = GetBucketStart(x.ViewedAt, granularity);
+                    var label = FormatBucketLabel(bucketStart, granularity);
+                    return new { x.ViewedAt, x.Price, x.ApartmentId, bucketStart, label };
+                })
+                .GroupBy(x => x.bucketStart)
+                .OrderBy(g => g.Key)
+                .Select(g =>
+                {
+                    var first = g.First();
+                    return new ApartmentPriceAnalyticsReportVm.PriceTrendRow
+                    {
+                        Label = first.label,
+                        AveragePrice = g.Average(x => x.Price),
+                        ViewsCount = g.Count()
+                    };
+                })
+                .OrderBy(x => x.Label)
+                .ToList();
+
+            return new ApartmentPriceAnalyticsReportVm
+            {
+                DateFrom = fromDate,
+                DateTo = toDate,
+                SelectedDistrict = normalizedDistrict,
+                Districts = availableDistricts,
+                Rooms = normalizedRooms,
+                SelectedApartmentType = normalizedType,
+                Granularity = granularity,
+                AverageByDistrict = avgByDistrict,
+                PriceTrend = trend
+            };
+        }
+
+        private static bool ApartmentTypeMatches(int? rooms, int? filterRooms, string? apartmentType)
+        {
+            if (filterRooms.HasValue)
+            {
+                if (!rooms.HasValue) return false;
+                if (rooms.Value != filterRooms.Value) return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(apartmentType) || apartmentType == "all")
+                return true;
+
+            if (!rooms.HasValue) return false;
+
+            return apartmentType switch
+            {
+                "studio" => rooms.Value == 1,
+                "family" => rooms.Value >= 2 && rooms.Value <= 3,
+                "large" => rooms.Value >= 4,
+                _ => true
+            };
+        }
+
+        private static string NormalizeGranularity(string granularity)
+        {
+            var g = string.IsNullOrWhiteSpace(granularity) ? "daily" : granularity.Trim().ToLowerInvariant();
+            return g switch
+            {
+                "weekly" => "weekly",
+                "monthly" => "monthly",
+                _ => "daily"
+            };
+        }
+
+        private static DateTime GetBucketStart(DateTime dt, string granularity)
+        {
+            var d = dt.Date;
+            if (granularity == "monthly")
+                return new DateTime(d.Year, d.Month, 1);
+
+            if (granularity == "weekly")
+            {
+                // Неделя с понедельника
+                var diff = ((int)d.DayOfWeek + 6) % 7;
+                return d.AddDays(-diff);
+            }
+
+            return d; // daily
+        }
+
+        private static string FormatBucketLabel(DateTime bucketStart, string granularity)
+        {
+            var inv = CultureInfo.InvariantCulture;
+            if (granularity == "monthly")
+                return bucketStart.ToString("MM.yyyy", inv);
+            if (granularity == "weekly")
+                return bucketStart.ToString("dd.MM.yyyy", inv);
+            return bucketStart.ToString("dd.MM.yyyy", inv);
         }
 
         private static ApartmentInteractivityReportVm.GroupRow BuildGroupRow(
