@@ -127,8 +127,8 @@
 
             for (let i = 0; i < items.length; i++) {
                 const x = items[i];
-                let label = "#" + x.apartmentId;
-                if (x.district && x.district.trim() !== "") label += " • " + x.district;
+                // Подпись на графике: только район (без #/ID и без разделителей)
+                let label = (x.district && x.district.trim() !== "") ? x.district.trim() : "—";
                 labels.push(label);
                 data.push(x.views || 0);
             }
