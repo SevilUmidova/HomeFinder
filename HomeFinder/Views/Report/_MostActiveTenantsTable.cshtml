@@ -1,9 +1,4 @@
 @model HomeFinder.Models.Reports.MostActiveTenantsReportVm
-@using System.Globalization
-
-@{
-    var inv = CultureInfo.InvariantCulture;
-}
 
 <div id="tableBlock">
     <div class="table-responsive">
@@ -13,7 +8,7 @@
                     <th>Tenant</th>
                     <th class="text-end">Login count</th>
                     <th class="text-end">Last login</th>
-                    <th class="text-end">Сумма аппойнтментов</th>
+                    <th class="text-end">Appointment count</th>
                 </tr>
             </thead>
             <tbody>
@@ -37,7 +32,7 @@
                         <td class="text-end">
                             @(x.LastLoginTime.HasValue ? x.LastLoginTime.Value.ToString("dd.MM.yyyy HH:mm") : "—")
                         </td>
-                        <td class="text-end fw-semibold">@x.AppointmentSum.ToString("n0", inv) UZS</td>
+                        <td class="text-end fw-semibold">@x.AppointmentCount</td>
                     </tr>
                 }
                 }

@@ -18,7 +18,7 @@ namespace HomeFinder.Models.Reports
             public string TenantName { get; set; } = string.Empty;
             public int LoginCount { get; set; }
             public DateTime? LastLoginTime { get; set; }
-            public decimal AppointmentSum { get; set; }
+            public int AppointmentCount { get; set; }
         }
     }
 }
