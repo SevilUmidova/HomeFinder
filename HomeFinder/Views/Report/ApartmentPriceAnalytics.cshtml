@@ -41,12 +41,6 @@
             </div>
 
             <div>
-                <label class="form-label mb-1">Комнат</label>
-                <input id="roomsFilter" name="rooms" type="number" class="form-control form-control-sm"
-                       value="@(Model.Rooms?.ToString() ?? "")" min="1" style="width:110px;" />
-            </div>
-
-            <div>
                 <label class="form-label mb-1">Тип (по комнатности)</label>
                 <select id="typeFilter" class="form-select form-select-sm" style="min-width:210px;">
                     <option value="all" selected="@(string.IsNullOrWhiteSpace(Model.SelectedApartmentType) || Model.SelectedApartmentType == "all")">Все</option>
@@ -187,7 +181,6 @@
             const dfEl = document.getElementById('dateFrom');
             const dtEl = document.getElementById('dateTo');
             const districtEl = document.getElementById('districtFilter');
-            const roomsEl = document.getElementById('roomsFilter');
             const typeEl = document.getElementById('typeFilter');
             const granEl = document.getElementById('granularityFilter');
 
@@ -206,8 +199,6 @@
             }
 
             const district = (districtEl?.value || '').trim();
-            const roomsRaw = (roomsEl?.value || '').trim();
-            const rooms = roomsRaw ? Number(roomsRaw) : null;
             const apartmentType = (typeEl?.value || 'all').trim();
             const granularity = (granEl?.value || 'daily').trim();
 
@@ -215,7 +206,6 @@
             params.set('dateFrom', formatRuDate(fromDate));
             params.set('dateTo', formatRuDate(toDate));
             if (district) params.set('district', district);
-            if (rooms !== null && !Number.isNaN(rooms)) params.set('rooms', String(rooms));
             if (apartmentType) params.set('apartmentType', apartmentType);
             if (granularity) params.set('granularity', granularity);
 
