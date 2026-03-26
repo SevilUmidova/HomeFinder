@@ -11,7 +11,7 @@
         <div>
             <h2 class="mb-1">🔥 Most viewed apartments</h2>
             <div id="reportPeriod" class="text-muted">
-                Топ @Model.Top по просмотрам (с @Model.DateFrom.ToString("dd.MM.yyyy") по @Model.DateTo.ToString("dd.MM.yyyy"))
+                Топ @Model.Top by views (from @Model.DateFrom.ToString("dd.MM.yyyy") to @Model.DateTo.ToString("dd.MM.yyyy"))
             </div>
         </div>
         <a class="btn btn-outline-secondary" asp-action="Index">← Back</a>
@@ -24,25 +24,25 @@
                 <input id="topInput" name="top" type="number" class="form-control form-control-sm" value="@Model.Top" min="1" max="50" style="width:100px;" />
             </div>
             <div>
-                <label for="dateFrom" class="form-label mb-1">От</label>
+                <label for="dateFrom" class="form-label mb-1">From</label>
                 <input id="dateFrom" name="dateFrom" type="text" class="form-control form-control-sm" value="@Model.DateFrom.ToString("dd.MM.yyyy")" placeholder="дд.мм.гггг" style="width:140px;" autocomplete="off" />
             </div>
             <div>
-                <label for="dateTo" class="form-label mb-1">До</label>
+                <label for="dateTo" class="form-label mb-1">To</label>
                 <input id="dateTo" name="dateTo" type="text" class="form-control form-control-sm" value="@Model.DateTo.ToString("dd.MM.yyyy")" placeholder="дд.мм.гггг" style="width:140px;" autocomplete="off" />
             </div>
             <div>
-                <label for="priceMin" class="form-label mb-1">Цена от</label>
+                <label for="priceMin" class="form-label mb-1">Price from</label>
                 <input id="priceMin" name="priceMin" type="number" class="form-control form-control-sm" style="width:130px;" />
             </div>
             <div>
-                <label for="priceMax" class="form-label mb-1">Цена до</label>
+                <label for="priceMax" class="form-label mb-1">Price to</label>
                 <input id="priceMax" name="priceMax" type="number" class="form-control form-control-sm" style="width:130px;" />
             </div>
             <div>
-                <label for="districtFilter" class="form-label mb-1">Район</label>
+                <label for="districtFilter" class="form-label mb-1">District</label>
                 <select id="districtFilter" class="form-select form-select-sm" style="min-width: 180px;">
-                    <option value="">Все районы</option>
+                    <option value="">All Districts</option>
                     @foreach (var d in Model.Districts)
                     {
                         <option value="@d" selected="@(d == Model.SelectedDistrict)">@d</option>
@@ -128,7 +128,7 @@
             for (let i = 0; i < items.length; i++) {
                 const x = items[i];
                 // Подпись на графике: только ID (без названия района)
-                let label = "ID " + String(x.apartmentId);
+                let label = "ID: " + String(x.apartmentId);
                 labels.push(label);
                 data.push(x.views || 0);
             }

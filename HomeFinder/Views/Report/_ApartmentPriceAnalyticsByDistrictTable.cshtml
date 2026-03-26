@@ -7,7 +7,7 @@
 
 @if (Model.AverageByDistrict == null || Model.AverageByDistrict.Count == 0)
 {
-    <div class="alert alert-info mb-0">Нет данных за выбранный период.</div>
+    <div class="alert alert-info mb-0">No data found for selected period.</div>
 }
 else
 {
@@ -16,8 +16,8 @@ else
             <thead>
                 <tr>
                     <th>Район</th>
-                    <th class="text-end">Средняя цена</th>
-                    <th class="text-end">Кол-во квартир</th>
+                    <th class="text-end">Average price</th>
+                    <th class="text-end">Number of apartments</th>
                 </tr>
             </thead>
             <tbody>

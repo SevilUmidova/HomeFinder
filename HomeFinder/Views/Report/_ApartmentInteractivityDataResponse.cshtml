@@ -18,7 +18,7 @@
                         role="tab"
                         aria-controls="tab-top-pane"
                         aria-selected="true">
-                    Топ объявлений
+                    Top listings
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -30,7 +30,7 @@
                         role="tab"
                         aria-controls="tab-compare-pane"
                         aria-selected="false">
-                    Сравнения
+                    Comparisons
                 </button>
             </li>
         </ul>
@@ -38,13 +38,13 @@
         <div class="tab-content pt-3" id="interactivityTabContent">
             <div class="tab-pane fade show active" id="tab-top-pane" role="tabpanel" aria-labelledby="tab-top" tabindex="0">
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h5 class="mb-0">Топ объявлений по конверсии</h5>
-                    <div class="text-muted small">минимум 10 просмотров для сортировки</div>
+                    <h5 class="mb-0">Top listings by conversion</h5>
+                    <div class="text-muted small">minimum 10 views for sorting</div>
                 </div>
 
                 @if (Model.Items.Count == 0)
                 {
-                    <div class="alert alert-info mb-0">Нет данных за выбранный период.</div>
+                    <div class="alert alert-info mb-0">No data found for selected period.</div>
                 }
                 else
                 {
@@ -53,11 +53,11 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Квартира</th>
-                                    <th class="text-end">Просмотры</th>
-                                    <th class="text-end">Обращения</th>
-                                    <th class="text-end">Конверсия</th>
-                                    <th class="text-end">Избранное</th>
+                                    <th>Listing</th>
+                                    <th class="text-end">Views</th>
+                                    <th class="text-end">Appointments</th>
+                                    <th class="text-end">Convresion</th>
+                                    <th class="text-end">Favorites</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -110,7 +110,7 @@
                     <div class="col-12">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <h5 class="mb-2">Сравнение по диапазонам цены</h5>
+                                <h5 class="mb-2">Comparison by price ranges</h5>
                                 @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByPriceRange)
                             </div>
                         </div>
@@ -119,7 +119,7 @@
                     <div class="col-12">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <h5 class="mb-2">Сравнение по району</h5>
+                                <h5 class="mb-2">Comparison by district</h5>
                                 @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByDistrict)
                             </div>
                         </div>
@@ -128,7 +128,7 @@
                     <div class="col-12">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <h5 class="mb-2">Сравнение по типу (комнатность)</h5>
+                                <h5 class="mb-2">Comparison by number of rooms</h5>
                                 @await Html.PartialAsync("_ApartmentInteractivityGroupTable", Model.ByRooms)
                             </div>
                         </div>

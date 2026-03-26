@@ -6,9 +6,9 @@
 <div class="container py-4">
     <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
-            <h2 class="mb-1">👥 Самые активные арендаторы</h2>
+            <h2 class="mb-1">👥 Most active tenants</h2>
             <div id="reportPeriod" class="text-muted">
-                Top @Model.Top арендаторов по входам (с @Model.DateFrom.ToString("dd.MM.yyyy") по @Model.DateTo.ToString("dd.MM.yyyy"))
+                Top @Model.Top tenants by number of account logins(from @Model.DateFrom.ToString("dd.MM.yyyy") to @Model.DateTo.ToString("dd.MM.yyyy"))
             </div>
         </div>
         <a class="btn btn-outline-secondary" asp-action="Index">← Back</a>
@@ -21,11 +21,11 @@
                 <input id="topInput" name="top" type="number" class="form-control form-control-sm" value="@Model.Top" min="1" max="50" style="width:100px;" />
             </div>
             <div>
-                <label for="dateFrom" class="form-label mb-1">От</label>
+                <label for="dateFrom" class="form-label mb-1">From</label>
                 <input id="dateFrom" name="dateFrom" type="text" class="form-control form-control-sm" value="@Model.DateFrom.ToString("dd.MM.yyyy")" placeholder="дд.мм.гггг" style="width:140px;" autocomplete="off" />
             </div>
             <div>
-                <label for="dateTo" class="form-label mb-1">До</label>
+                <label for="dateTo" class="form-label mb-1">To</label>
                 <input id="dateTo" name="dateTo" type="text" class="form-control form-control-sm" value="@Model.DateTo.ToString("dd.MM.yyyy")" placeholder="дд.мм.гггг" style="width:140px;" autocomplete="off" />
             </div>
             <div>
@@ -85,7 +85,7 @@
         function updatePeriodLabel(top, fromText, toText) {
             const periodEl = document.getElementById('reportPeriod');
             if (!periodEl) return;
-            periodEl.textContent = `Top ${top} арендаторов по входам (с ${fromText} по ${toText})`;
+            periodEl.textContent = `Top ${top} tenants by account login (from ${fromText} to ${toText})`;
         }
 
         async function reloadReport() {

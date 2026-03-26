@@ -11,7 +11,7 @@
         {
             <div class="text-muted small mb-2">Administrator reports</div>
         }
-        <div class="text-muted">Выбери отчёт и количество строк (top).</div>
+        <div class="text-muted">Select the report and number of rows (top).</div>
     </div>
 
     <div class="row g-3">
@@ -19,7 +19,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <h5 class="card-title">🔥 Most viewed apartments</h5>
-                    <p class="card-text text-muted">Топ квартир по просмотрам + график.</p>
+                    <p class="card-text text-muted">Top listings by views</p>
 
                     <form method="get" asp-controller="Report" asp-action="MostViewedApartments" class="d-flex gap-2">
                         <input type="number" name="top" class="form-control" value="5" min="1" max="50" />
@@ -33,7 +33,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <h5 class="card-title">🏙 Most popular districts</h5>
-                    <p class="card-text text-muted">Сумма просмотров по району (district) + график.</p>
+                    <p class="card-text text-muted">Number of views by districts.</p>
 
                     <form method="get" asp-controller="Report" asp-action="MostViewedDistricts" class="d-flex gap-2">
                         <input type="number" name="top" class="form-control" value="5" min="1" max="50" />
@@ -47,7 +47,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <h5 class="card-title">💬 Apartment interactivity</h5>
-                    <p class="card-text text-muted">Просмотры vs обращения (appointments), конверсия + сравнения по группам.</p>
+                    <p class="card-text text-muted">Views vs appointments, comparison by groups.</p>
 
                     <form method="get" asp-controller="Report" asp-action="ApartmentInteractivity" class="d-flex gap-2">
                         <input type="number" name="top" class="form-control" value="20" min="1" max="50" />
@@ -63,7 +63,7 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
                         <h5 class="card-title">💰 Price analytics</h5>
-                        <p class="card-text text-muted">Средняя цена по районам и тренды по времени.</p>
+                        <p class="card-text text-muted">Average price by districts and trends over time</p>
 
                         <form method="get" asp-controller="Report" asp-action="ApartmentPriceAnalytics" class="d-flex gap-2">
                             <button class="btn btn-primary">Open</button>
@@ -78,8 +78,8 @@
             <div class="col-md-6">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
-                        <h5 class="card-title">👥 Самые активные арендаторы</h5>
-                        <p class="card-text text-muted">Топ арендаторов по количеству входов в аккаунт.</p>
+                        <h5 class="card-title">👥 Most active tenants</h5>
+                        <p class="card-text text-muted">Top tenants by number of account logins.</p>
 
                         <form method="get" asp-controller="Report" asp-action="MostActiveTenants" class="d-flex gap-2">
                             <input type="number" name="top" class="form-control" value="20" min="1" max="50" />

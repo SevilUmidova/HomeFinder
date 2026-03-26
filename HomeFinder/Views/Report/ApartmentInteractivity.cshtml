@@ -10,13 +10,13 @@
 <div class="container py-4">
     <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
-            <h2 class="mb-1">💬 Интерактивность квартир</h2>
-            <div class="text-muted">
-                Просмотры = <code>ApartmentViewLogs</code>, обращения = <code>Appointments</code> за период.
-                Избранное (<code>Favorites</code>) — только общий счётчик (в таблице нет даты).
-            </div>
+            <h2 class="mb-1">💬 Listings interactivity</h2>
+            <!--<div class="text-muted">
+                Views = <code>ApartmentViewLogs</code>, contacts = <code>Appointments</code> for period.
+                Favourites (<code>Favorites</code>) - only common counter (в таблице нет даты).
+            </div>-->
         </div>
-        <a class="btn btn-outline-secondary" asp-controller="Report" asp-action="Index">Назад</a>
+        <a class="btn btn-outline-secondary" asp-controller="Report" asp-action="Index">Back</a>
     </div>
 
     <div class="card shadow-sm mb-3">
@@ -27,28 +27,28 @@
                     <input class="form-control" type="number" name="top" min="1" max="50" value="@Model.Top" />
                 </div>
                 <div class="col-sm-2">
-                    <label class="form-label">Дата от</label>
+                    <label class="form-label">Date from</label>
                     <input class="form-control" type="text" name="dateFrom" value="@fmtDate(Model.DateFrom)" />
                 </div>
                 <div class="col-sm-2">
-                    <label class="form-label">Дата до</label>
+                    <label class="form-label">Date to</label>
                     <input class="form-control" type="text" name="dateTo" value="@fmtDate(Model.DateTo)" />
                 </div>
                 <div class="col-sm-2">
-                    <label class="form-label">Цена от</label>
+                    <label class="form-label">Price from</label>
                     <input class="form-control" type="number" name="priceMin" value="@(Model.PriceMin?.ToString(inv) ?? "")" />
                 </div>
                 <div class="col-sm-2">
-                    <label class="form-label">Цена до</label>
+                    <label class="form-label">Price to</label>
                     <input class="form-control" type="number" name="priceMax" value="@(Model.PriceMax?.ToString(inv) ?? "")" />
                 </div>
                 <div class="col-sm-2">
-                    <label class="form-label">Шаг диапазона цены</label>
+                    <label class="form-label">Price range step</label>
                     <input class="form-control" type="number" name="priceBucketSize" value="@Model.PriceBucketSize.ToString(inv)" />
                 </div>
                 <div class="col-12 d-flex gap-2 mt-2">
-                    <button class="btn btn-primary" type="submit">Обновить</button>
-                    <div class="text-muted small align-self-center">Формат дат: dd.MM.yyyy</div>
+                    <button class="btn btn-primary" type="submit">Update</button>
+                    <!--<div class="text-muted small align-self-center">Date format: dd.MM.yyyy</div>-->
                 </div>
             </form>
         </div>

@@ -10,7 +10,7 @@
         <div>
             <h2 class="mb-1">💰 Price analytics</h2>
             <div id="reportPeriod" class="text-muted">
-                Средняя цена по районам и тренд (с @Model.DateFrom.ToString("dd.MM.yyyy") по @Model.DateTo.ToString("dd.MM.yyyy"))
+                Average price by district and trend (from @Model.DateFrom.ToString("dd.MM.yyyy") to @Model.DateTo.ToString("dd.MM.yyyy"))
             </div>
         </div>
         <a class="btn btn-outline-secondary" asp-action="Index">← Back</a>
@@ -19,20 +19,20 @@
     <div class="card shadow-sm mb-3">
         <div class="card-body d-flex flex-wrap align-items-end gap-2">
             <div>
-                <label class="form-label mb-1">От</label>
+                <label class="form-label mb-1">From</label>
                 <input id="dateFrom" name="dateFrom" type="text" class="form-control form-control-sm"
                        value="@Model.DateFrom.ToString("dd.MM.yyyy")" autocomplete="off" style="width:140px;" />
             </div>
             <div>
-                <label class="form-label mb-1">До</label>
+                <label class="form-label mb-1">To</label>
                 <input id="dateTo" name="dateTo" type="text" class="form-control form-control-sm"
                        value="@Model.DateTo.ToString("dd.MM.yyyy")" autocomplete="off" style="width:140px;" />
             </div>
 
             <div>
-                <label class="form-label mb-1">Район</label>
+                <label class="form-label mb-1">District</label>
                 <select id="districtFilter" class="form-select form-select-sm" style="min-width:180px;">
-                    <option value="">Все районы</option>
+                    <option value="">All Districts</option>
                     @foreach (var d in Model.Districts)
                     {
                         <option value="@d" selected="@(d == Model.SelectedDistrict)">@d</option>
@@ -41,9 +41,9 @@
             </div>
 
             <div>
-                <label class="form-label mb-1">Тип (по комнатности)</label>
+                <label class="form-label mb-1">Type (number of rooms)</label>
                 <select id="typeFilter" class="form-select form-select-sm" style="min-width:210px;">
-                    <option value="all" selected="@(string.IsNullOrWhiteSpace(Model.SelectedApartmentType) || Model.SelectedApartmentType == "all")">Все</option>
+                    <option value="all" selected="@(string.IsNullOrWhiteSpace(Model.SelectedApartmentType) || Model.SelectedApartmentType == "all")">All</option>
                     <option value="studio" selected="@(Model.SelectedApartmentType == "studio")">Studio (1)</option>
                     <option value="family" selected="@(Model.SelectedApartmentType == "family")">Family (2-3)</option>
                     <option value="large" selected="@(Model.SelectedApartmentType == "large")">Large (4+)</option>
@@ -51,7 +51,7 @@
             </div>
 
             <div>
-                <label class="form-label mb-1">Тренд</label>
+                <label class="form-label mb-1">Тrend</label>
                 <select id="granularityFilter" class="form-select form-select-sm" style="width:160px;">
                     <option value="daily" selected="@(Model.Granularity == "daily")">Daily</option>
                     <option value="weekly" selected="@(Model.Granularity == "weekly")">Weekly</option>
