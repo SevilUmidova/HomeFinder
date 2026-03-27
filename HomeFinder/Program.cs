@@ -1,5 +1,6 @@
 
 using HomeFinder.Context;
+using HomeFinder.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,7 @@ namespace HomeFinder
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddHttpClient();
+            builder.Services.AddSingleton<IReviewSummaryService, ReviewSummaryService>();
             builder.Services.AddDbContext<HomeFinderContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));

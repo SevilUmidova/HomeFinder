@@ -1,5 +1,6 @@
 using HomeFinder.Context;
 using HomeFinder.Models;
+using HomeFinder.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,11 +10,16 @@ namespace HomeFinder.Controllers
     {
         private readonly HomeFinderContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly IReviewSummaryService _reviewSummaryService;
 
-        public ApartmentsController(HomeFinderContext context, IWebHostEnvironment env)
+        public ApartmentsController(
+            HomeFinderContext context,
+            IWebHostEnvironment env,
+            IReviewSummaryService reviewSummaryService)
         {
             _context = context;
             _env = env;
+            _reviewSummaryService = reviewSummaryService;
         }
 
         // Проверка авторизации владельца
@@ -122,7 +128,11 @@ namespace HomeFinder.Controllers
 
                 ReviewCount = apartment.ReviewApartments.Count,
 
-                Reviews = apartment.ReviewApartments.ToList()
+                Reviews = apartment.ReviewApartments
+                    .OrderByDescending(r => r.CreatedAt ?? DateTime.MinValue)
+                    .ToList(),
+
+                ReviewSummary = _reviewSummaryService.BuildSummary(apartment.ReviewApartments)
             };
 
             return View(model);

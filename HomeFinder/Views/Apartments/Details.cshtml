@@ -202,6 +202,58 @@ else
     <div class="container mt-5 mb-5">
         <h3>💬 Reviews (@Model.ReviewCount)</h3>
 
+        @if (Model.ReviewSummary != null)
+        {
+            <div class="card border-0 shadow-sm mt-4 mb-4" style="background: linear-gradient(135deg, #f7fbff 0%, #eef4ff 100%); border-radius: 18px;">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h5 class="mb-0">🧠 Review Summary</h5>
+                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis" style="font-size: 0.85rem;">
+                            @Model.ReviewCount reviews analyzed
+                        </span>
+                    </div>
+
+                    <p class="mb-2">@Model.ReviewSummary.Overview</p>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.ReviewSummary.RecentTrend))
+                    {
+                        <p class="text-muted mb-3">@Model.ReviewSummary.RecentTrend</p>
+                    }
+
+                    @if (Model.ReviewSummary.PositiveHighlights.Any())
+                    {
+                        <div class="mb-3">
+                            <div class="fw-semibold text-success mb-2">Most mentioned positives</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var highlight in Model.ReviewSummary.PositiveHighlights)
+                                {
+                                    <span class="badge rounded-pill text-bg-success">@highlight</span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (Model.ReviewSummary.NegativeHighlights.Any())
+                    {
+                        <div class="mb-3">
+                            <div class="fw-semibold text-warning mb-2">Things to watch</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var highlight in Model.ReviewSummary.NegativeHighlights)
+                                {
+                                    <span class="badge rounded-pill text-bg-warning">@highlight</span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Model.ReviewSummary.RatingBreakdown))
+                    {
+                        <div class="small text-muted">@Model.ReviewSummary.RatingBreakdown</div>
+                    }
+                </div>
+            </div>
+        }
+
         @if (Model.Reviews != null && Model.Reviews.Count > 0)
         {
             <div class="row mt-4">

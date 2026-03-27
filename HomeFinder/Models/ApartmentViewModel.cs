@@ -62,6 +62,8 @@ namespace HomeFinder.Models
         // ✅ КРИТИЧНО: Список ВСЕх отзывов для Details страницы
         public List<ReviewApartment> Reviews { get; set; } = new();
 
+        public ReviewSummaryViewModel? ReviewSummary { get; set; }
+
         // ✅ Для загрузки фото при создании/редактировании
         [Display(Name = "Загрузить фотографии")]
         public List<IFormFile> Photos { get; set; } = new();
