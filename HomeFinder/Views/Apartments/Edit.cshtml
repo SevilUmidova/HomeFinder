@@ -1,4 +1,4 @@
-﻿@model HomeFinder.Models.ApartmentViewModel
+@model HomeFinder.Models.ApartmentViewModel
 @{
     ViewData["Title"] = "Edit Apartment";
     var initLat = Model.Latitude?.ToString("F6") ?? "41.311081";
@@ -93,11 +93,6 @@
                                 <input asp-for="City" class="form-control" value="Tashkent" />
                             </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="Region" class="form-label">Region</label>
-                        <input asp-for="Region" class="form-control" />
-                        <span asp-validation-for="Region" class="text-danger"></span>
                     </div>
                 </fieldset>
 
@@ -249,7 +244,6 @@
                 const buildingField = document.getElementById('BuildingNumber');
                 const districtField = document.getElementById('District');
                 const cityField = document.getElementById('City');
-                const regionField = document.getElementById('Region');
 
                 // Street (улица/проспект)
                 streetField.value = data.address?.road ||
@@ -266,18 +260,13 @@
                                  data.address?.town ||
                                  data.address?.municipality || 'Tashkent';
 
-                // Region (область)
-                regionField.value = data.address?.state ||
-                                   data.address?.region ||
-                                   data.address?.["ISO3166-2-lvl4"] || 'Tashkent';
-
                 // Building (если есть)
                 if (data.address?.house_number) {
                     buildingField.value = data.address.house_number;
                 }
 
                 // ✅ Визуал
-                [streetField, districtField, cityField, regionField].forEach(field => {
+                [streetField, districtField, cityField].forEach(field => {
                     if (field.value) {
                         field.classList.add('border-success');
                         setTimeout(() => field.classList.remove('border-success'), 1500);
