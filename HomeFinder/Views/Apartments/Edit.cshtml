@@ -153,10 +153,17 @@
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof L === 'undefined') return console.error('Leaflet missing');
 
-            addressMap = L.map('addressMap').setView([41.311, 69.241], 12);
+            const initLat = parseFloat(document.getElementById('latitude')?.value || '@initLat');
+            const initLng = parseFloat(document.getElementById('longitude')?.value || '@initLng');
+            const hasValidInitCoords = Number.isFinite(initLat) && Number.isFinite(initLng);
+            const startLat = hasValidInitCoords ? initLat : 41.311;
+            const startLng = hasValidInitCoords ? initLng : 69.241;
+            const startZoom = hasValidInitCoords ? 16 : 12;
+
+            addressMap = L.map('addressMap').setView([startLat, startLng], startZoom);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(addressMap);
             
-            addressMarker = L.marker([41.311, 69.241], { draggable: true }).addTo(addressMap);
+            addressMarker = L.marker([startLat, startLng], { draggable: true }).addTo(addressMap);
             
             addressMap.on('click', e => {
                 addressMarker.setLatLng(e.latlng);
