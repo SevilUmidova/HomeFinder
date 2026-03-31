@@ -1,4 +1,4 @@
-﻿using HomeFinder.Context;
+using HomeFinder.Context;
 using HomeFinder.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +30,8 @@ namespace HomeFinder.Controllers
             var apartments = _context.Apartments
                 .Include(a => a.User)
                 .Include(a => a.Addresses)
+                .Include(a => a.ReviewApartments)
+                .Include(a => a.Photos)
                 .ToList();
 
             var viewModels = apartments.Select(a => new ApartmentViewModel

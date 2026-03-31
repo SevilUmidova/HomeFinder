@@ -353,6 +353,43 @@ namespace HomeFinder.Controllers
             return RedirectToAction("MyApartments");
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult DeletePhoto(int apartmentId, string photoPath)
+        {
+            if (!IsLandlordLoggedIn())
+                return Unauthorized(new { success = false, message = "Not authorized" });
+
+            if (string.IsNullOrWhiteSpace(photoPath))
+                return BadRequest(new { success = false, message = "Photo path is required" });
+
+            int userId = HttpContext.Session.GetInt32("UserId").Value;
+            var photo = _context.Photos
+                .Include(p => p.Apartment)
+                .FirstOrDefault(p =>
+                    p.ApartmentId == apartmentId &&
+                    p.PhotoPath == photoPath &&
+                    p.Apartment != null &&
+                    p.Apartment.UserId == userId);
+
+            if (photo == null)
+                return NotFound(new { success = false, message = "Photo not found" });
+
+            if (!string.IsNullOrEmpty(photo.PhotoPath))
+            {
+                string filePath = Path.Combine(_env.WebRootPath, photo.PhotoPath.TrimStart('/'));
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+
+            _context.Photos.Remove(photo);
+            _context.SaveChanges();
+
+            return Json(new { success = true });
+        }
+
         // Удаление квартиры
         [HttpGet]
         public IActionResult Delete(int id)

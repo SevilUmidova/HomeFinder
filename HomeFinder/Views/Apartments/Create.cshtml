@@ -240,13 +240,15 @@
             }
         }
 
-        // Фото превью (НАДЁЖНЫЙ)
+        // Фото превью + удаление выбранных файлов без перезагрузки
         document.addEventListener('DOMContentLoaded', function() {
             const photoInput = document.getElementById('photoInput');
             const photoPreview = document.getElementById('photoPreview');
 
             if (photoInput) {
                 photoInput.addEventListener('change', function(e) {
+                    const input = e.target;
+                    const dt = new DataTransfer();
                     photoPreview.innerHTML = '';
 
                     Array.from(e.target.files).slice(0, 10).forEach((file, index) => {
@@ -255,18 +257,43 @@
                             return;
                         }
 
+                        dt.items.add(file);
                         const reader = new FileReader();
                         reader.onload = function(ev) {
                             const col = document.createElement('div');
                             col.className = 'col-md-3 mb-2';
+                            col.dataset.fileIndex = String(index);
                             col.innerHTML = `
                                 <div class="position-relative">
+                                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-1 bg-dark rounded-circle p-2 js-remove-new-photo" aria-label="Delete"></button>
                                     <img src="${ev.target.result}" class="img-thumbnail w-100" style="height: 120px; object-fit: cover;">
                                     <small class="d-block mt-1 text-truncate">${file.name}</small>
                                 </div>`;
                             photoPreview.appendChild(col);
                         };
                         reader.readAsDataURL(file);
+                    });
+
+                    input.files = dt.files;
+                });
+
+                photoPreview.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.js-remove-new-photo');
+                    if (!btn) return;
+
+                    const col = btn.closest('[data-file-index]');
+                    if (!col) return;
+
+                    const removeIndex = Number(col.dataset.fileIndex);
+                    const dt = new DataTransfer();
+                    Array.from(photoInput.files || []).forEach((file, i) => {
+                        if (i !== removeIndex) dt.items.add(file);
+                    });
+                    photoInput.files = dt.files;
+                    col.remove();
+
+                    Array.from(photoPreview.querySelectorAll('[data-file-index]')).forEach((el, idx) => {
+                        el.dataset.fileIndex = String(idx);
                     });
                 });
             }
