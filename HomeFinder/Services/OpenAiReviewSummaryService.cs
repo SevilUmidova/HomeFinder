@@ -79,7 +79,8 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                     ? "Ключ OpenAI не настроен; показано сохранённое саммари."
                     : "Саммари недоступен: не задан ключ OpenAI.",
                 GeneratedAtUtc = cached?.GeneratedAtUtc,
-                Summary = cached?.Summary
+                Summary = cached?.Summary,
+                Diagnostic = "Конфигурация: пустой OpenAI:ApiKey (appsettings / переменные среды)."
             };
         }
 
@@ -102,14 +103,16 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
             }
 
             ReviewSummaryViewModel? summary;
+            string? generateDiagnostic = null;
             try
             {
-                summary = await GenerateSummaryAsync(sourceReviews, apiKey, cancellationToken);
+                (summary, generateDiagnostic) = await GenerateSummaryAsync(sourceReviews, apiKey, cancellationToken);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to generate OpenAI review summary for apartment {ApartmentId}", apartmentId);
                 summary = null;
+                generateDiagnostic = $"Исключение: {TruncateDiagnostic(ex.Message, 400)}";
             }
 
             if (summary != null)
@@ -137,7 +140,10 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                     Status = "ready",
                     Message = "Не удалось обновить саммари сейчас. Показана сохранённая версия — попробуйте «Обновить саммари» ещё раз позже.",
                     GeneratedAtUtc = cached.GeneratedAtUtc,
-                    Summary = cached.Summary
+                    Summary = cached.Summary,
+                    Diagnostic = string.IsNullOrWhiteSpace(generateDiagnostic)
+                        ? "OpenAI не вернул валидное саммари (см. логи сервера)."
+                        : generateDiagnostic
                 };
             }
 
@@ -146,7 +152,10 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                 Status = "disabled",
                 Message = "Сейчас саммари не получился. Нажмите «Обновить саммари» или зайдите позже — сутки ждать не обязательно.",
                 GeneratedAtUtc = null,
-                Summary = null
+                Summary = null,
+                Diagnostic = string.IsNullOrWhiteSpace(generateDiagnostic)
+                    ? "Причина не определена (см. логи сервера: OpenAiReviewSummaryService)."
+                    : generateDiagnostic
             };
         }
         finally
@@ -155,96 +164,144 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
         }
     }
 
-    private async Task<ReviewSummaryViewModel?> GenerateSummaryAsync(
+    private async Task<(ReviewSummaryViewModel? Summary, string? Diagnostic)> GenerateSummaryAsync(
         IReadOnlyCollection<ReviewApartment> reviews,
         string apiKey,
         CancellationToken cancellationToken)
     {
-        var client = _httpClientFactory.CreateClient();
-        client.Timeout = TimeSpan.FromMinutes(3);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-        var model = _configuration["OpenAI:Model"];
-        if (string.IsNullOrWhiteSpace(model))
+        try
         {
-            model = "gpt-4o-mini";
-        }
+            var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromMinutes(3);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        var reviewText = string.Join("\n\n", reviews.Select((review, index) =>
-        {
-            var date = review.CreatedAt?.ToString("dd.MM.yyyy") ?? "unknown date";
-            var rating = review.Rating.HasValue ? $"{review.Rating.Value}/5" : "no rating";
-            var comment = (review.Comment ?? string.Empty).Trim();
-            return $"{index + 1}. Date: {date}; Rating: {rating}; Review: {comment}";
-        }));
-
-        var payload = new
-        {
-            model,
-            response_format = new { type = "json_object" },
-            messages = new object[]
+            var model = _configuration["OpenAI:Model"];
+            if (string.IsNullOrWhiteSpace(model))
             {
-                new
-                {
-                    role = "system",
-                    content =
-                        "You summarize apartment reviews. Use only the provided reviews. Return valid JSON with keys: " +
-                        "overview (string), recentTrend (string), ratingBreakdown (string), positiveHighlights (array of strings), negativeHighlights (array of strings). " +
-                        "All text values must be in Russian. Keep it concise, factual, and do not hallucinate."
-                },
-                new
-                {
-                    role = "user",
-                    content =
-                        "Summarize the apartment reviews below.\n" +
-                        "Rules:\n" +
-                        "- overview: 2-4 short sentences\n" +
-                        "- recentTrend: one short sentence or empty string\n" +
-                        "- ratingBreakdown: compact text if ratings are available, otherwise empty string\n" +
-                        "- positiveHighlights: up to 3 short phrases\n" +
-                        "- negativeHighlights: up to 3 short phrases\n\n" +
-                        $"Reviews:\n{reviewText}"
-                }
+                model = "gpt-4o-mini";
             }
-        };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions")
+            var reviewText = string.Join("\n\n", reviews.Select((review, index) =>
+            {
+                var date = review.CreatedAt?.ToString("dd.MM.yyyy") ?? "unknown date";
+                var rating = review.Rating.HasValue ? $"{review.Rating.Value}/5" : "no rating";
+                var comment = (review.Comment ?? string.Empty).Trim();
+                return $"{index + 1}. Date: {date}; Rating: {rating}; Review: {comment}";
+            }));
+
+            var payload = new
+            {
+                model,
+                response_format = new { type = "json_object" },
+                messages = new object[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content =
+                            "You summarize apartment reviews. Use only the provided reviews. Return valid JSON with keys: " +
+                            "overview (string), recentTrend (string), ratingBreakdown (string), positiveHighlights (array of strings), negativeHighlights (array of strings). " +
+                            "All text values must be in Russian. Keep it concise, factual, and do not hallucinate."
+                    },
+                    new
+                    {
+                        role = "user",
+                        content =
+                            "Summarize the apartment reviews below.\n" +
+                            "Rules:\n" +
+                            "- overview: 2-4 short sentences\n" +
+                            "- recentTrend: one short sentence or empty string\n" +
+                            "- ratingBreakdown: compact text if ratings are available, otherwise empty string\n" +
+                            "- positiveHighlights: up to 3 short phrases\n" +
+                            "- negativeHighlights: up to 3 short phrases\n\n" +
+                            $"Reviews:\n{reviewText}"
+                    }
+                }
+            };
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+            };
+
+            using var response = await client.SendAsync(request, cancellationToken);
+            var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("OpenAI summary request failed: {StatusCode} {Body}", (int)response.StatusCode, raw);
+                return (null, $"OpenAI HTTP {(int)response.StatusCode}: {TruncateDiagnostic(raw)}");
+            }
+
+            using var outerDoc = JsonDocument.Parse(raw);
+            var rootEl = outerDoc.RootElement;
+            if (!rootEl.TryGetProperty("choices", out var choicesEl) ||
+                choicesEl.ValueKind != JsonValueKind.Array ||
+                choicesEl.GetArrayLength() == 0)
+            {
+                return (null, $"В ответе OpenAI нет choices[]. Фрагмент: {TruncateDiagnostic(raw)}");
+            }
+
+            var choice0 = choicesEl[0];
+            if (!choice0.TryGetProperty("message", out var messageEl))
+            {
+                return (null, $"Нет message в первом choice. Фрагмент: {TruncateDiagnostic(raw)}");
+            }
+
+            if (!messageEl.TryGetProperty("content", out var contentEl) ||
+                contentEl.ValueKind != JsonValueKind.String)
+            {
+                return (null, "Поле message.content отсутствует или не строка.");
+            }
+
+            var content = contentEl.GetString();
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return (null, "Пустой message.content от OpenAI.");
+            }
+
+            using var summaryDoc = JsonDocument.Parse(content);
+            var root = summaryDoc.RootElement;
+
+            var vm = new ReviewSummaryViewModel
+            {
+                Overview = GetString(root, "overview"),
+                RecentTrend = GetString(root, "recentTrend"),
+                RatingBreakdown = GetString(root, "ratingBreakdown"),
+                PositiveHighlights = GetStringArray(root, "positiveHighlights"),
+                NegativeHighlights = GetStringArray(root, "negativeHighlights")
+            };
+
+            return (vm, null);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
-        };
-
-        using var response = await client.SendAsync(request, cancellationToken);
-        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+            return (null, "Таймаут или обрыв запроса к OpenAI (проверьте сеть и таймаут клиента). " + ex.Message);
+        }
+        catch (HttpRequestException ex)
         {
-            _logger.LogWarning("OpenAI summary request failed: {StatusCode} {Body}", (int)response.StatusCode, raw);
-            return null;
+            return (null, $"HTTP к OpenAI: {TruncateDiagnostic(ex.Message)}");
+        }
+        catch (JsonException ex)
+        {
+            return (null, $"Разбор JSON (ответ или content модели): {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in GenerateSummaryAsync");
+            return (null, $"Ошибка: {TruncateDiagnostic(ex.Message)}");
+        }
+    }
+
+    private static string TruncateDiagnostic(string? text, int max = 500)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return "(пусто)";
         }
 
-        using var outerDoc = JsonDocument.Parse(raw);
-        var content = outerDoc.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString();
-
-        if (string.IsNullOrWhiteSpace(content))
-        {
-            return null;
-        }
-
-        using var summaryDoc = JsonDocument.Parse(content);
-        var root = summaryDoc.RootElement;
-
-        return new ReviewSummaryViewModel
-        {
-            Overview = GetString(root, "overview"),
-            RecentTrend = GetString(root, "recentTrend"),
-            RatingBreakdown = GetString(root, "ratingBreakdown"),
-            PositiveHighlights = GetStringArray(root, "positiveHighlights"),
-            NegativeHighlights = GetStringArray(root, "negativeHighlights")
-        };
+        var t = text.Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal).Trim();
+        return t.Length <= max ? t : t[..max] + "…";
     }
 
     private async Task<ReviewSummaryCacheEntry?> ReadCacheAsync(int apartmentId, CancellationToken cancellationToken)

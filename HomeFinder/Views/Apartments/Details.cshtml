@@ -304,6 +304,16 @@ else
         if (btn) btn.disabled = !!busy;
     }
 
+    /** Детали ошибки с сервера — смотрите в F12 → Console (и вкладка Network → ответ GetReviewSummary). */
+    function logReviewSummaryResponse(data) {
+        if (data && data.diagnostic) {
+            console.warn('[HomeFinder] Саммари — diagnostic:', data.diagnostic);
+        }
+        if (data && (data.status === 'disabled' || data.status === 'no_data' || data.diagnostic)) {
+            console.info('[HomeFinder] Саммари — полный ответ API:', data);
+        }
+    }
+
     function renderBadgeList(containerId, wrapId, items, badgeClass) {
         const wrap = document.getElementById(wrapId);
         const container = document.getElementById(containerId);
@@ -417,10 +427,13 @@ else
             window.clearTimeout(timeoutId);
 
             if (!response.ok) {
+                const errBody = await response.text().catch(function() { return ''; });
+                console.error('[HomeFinder] GetReviewSummary HTTP', response.status, response.statusText, errBody ? errBody.slice(0, 800) : '');
                 throw new Error('Failed to load review summary');
             }
 
             const data = await response.json();
+            logReviewSummaryResponse(data);
 
             if (data.status === 'ready' && data.summary) {
                 renderReviewSummary(data.summary, data.generatedAtUtc, data.message || '');
@@ -439,7 +452,7 @@ else
 
             showReviewSummaryMessage(data.message || 'Саммари сейчас недоступен.');
         } catch (error) {
-            console.error('Error loading review summary:', error);
+            console.error('[HomeFinder] Саммари — ошибка fetch (сеть / CORS / таймаут):', error);
             showReviewSummaryMessage('Не удалось получить ответ (сеть или таймаут). Нажмите «Обновить саммари» ещё раз.');
         } finally {
             setReviewSummaryBusy(false);

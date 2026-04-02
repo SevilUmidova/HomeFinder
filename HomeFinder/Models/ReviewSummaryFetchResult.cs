@@ -9,5 +9,8 @@ public class ReviewSummaryFetchResult
     public DateTime? GeneratedAtUtc { get; set; }
 
     public ReviewSummaryViewModel? Summary { get; set; }
+
+    /// <summary>Краткая техническая причина сбоя (для отладки в F12 / Network). Не для показа обычным пользователям в UI.</summary>
+    public string? Diagnostic { get; set; }
 }
 
