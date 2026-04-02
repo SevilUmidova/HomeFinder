@@ -10,16 +10,16 @@ namespace HomeFinder.Controllers
     {
         private readonly HomeFinderContext _context;
         private readonly IWebHostEnvironment _env;
-        private readonly IReviewSummaryService _reviewSummaryService;
+        private readonly IAiReviewSummaryService _aiReviewSummaryService;
 
         public ApartmentsController(
             HomeFinderContext context,
             IWebHostEnvironment env,
-            IReviewSummaryService reviewSummaryService)
+            IAiReviewSummaryService aiReviewSummaryService)
         {
             _context = context;
             _env = env;
-            _reviewSummaryService = reviewSummaryService;
+            _aiReviewSummaryService = aiReviewSummaryService;
         }
 
         // Проверка авторизации владельца
@@ -130,12 +130,29 @@ namespace HomeFinder.Controllers
 
                 Reviews = apartment.ReviewApartments
                     .OrderByDescending(r => r.CreatedAt ?? DateTime.MinValue)
-                    .ToList(),
-
-                ReviewSummary = _reviewSummaryService.BuildSummary(apartment.ReviewApartments)
+                    .ToList()
             };
 
             return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetReviewSummary(int id, CancellationToken cancellationToken)
+        {
+            var apartment = await _context.Apartments
+                .AsNoTracking()
+                .Include(a => a.ReviewApartments)
+                .FirstOrDefaultAsync(a => a.ApartmentId == id, cancellationToken);
+
+            if (apartment == null)
+                return NotFound();
+
+            var result = await _aiReviewSummaryService.GetSummaryAsync(
+                apartment.ApartmentId,
+                apartment.ReviewApartments.ToList(),
+                cancellationToken);
+
+            return Json(result);
         }
 
 

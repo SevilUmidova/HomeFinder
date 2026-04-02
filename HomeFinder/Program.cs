@@ -13,6 +13,7 @@ namespace HomeFinder
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddHttpClient();
             builder.Services.AddSingleton<IReviewSummaryService, ReviewSummaryService>();
+            builder.Services.AddSingleton<IAiReviewSummaryService, OpenAiReviewSummaryService>();
             builder.Services.AddDbContext<HomeFinderContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));

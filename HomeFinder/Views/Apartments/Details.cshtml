@@ -199,57 +199,40 @@ else
     <div class="container mt-5 mb-5">
         <h3>💬 Reviews (@Model.ReviewCount)</h3>
 
-        @if (Model.ReviewSummary != null)
-        {
-            <div class="card border-0 shadow-sm mt-4 mb-4" style="background: linear-gradient(135deg, #f7fbff 0%, #eef4ff 100%); border-radius: 18px;">
-                <div class="card-body p-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h5 class="mb-0">🧠 Review Summary</h5>
-                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis" style="font-size: 0.85rem;">
-                            @Model.ReviewCount reviews analyzed
-                        </span>
+        <div id="reviewSummaryCard" class="card border-0 shadow-sm mt-4 mb-4" style="background: linear-gradient(135deg, #f7fbff 0%, #eef4ff 100%); border-radius: 18px;">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h5 class="mb-0">🧠 Review Summary</h5>
+                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis" style="font-size: 0.85rem;">
+                        @Model.ReviewCount reviews analyzed
+                    </span>
+                </div>
+
+                <div id="reviewSummaryLoading" class="text-muted">
+                    Generating review summary...
+                </div>
+
+                <div id="reviewSummaryError" class="alert alert-light border d-none mb-0"></div>
+
+                <div id="reviewSummaryContent" class="d-none">
+                    <p id="reviewSummaryOverview" class="mb-2"></p>
+                    <p id="reviewSummaryTrend" class="text-muted mb-3 d-none"></p>
+
+                    <div id="reviewSummaryPositivesWrap" class="mb-3 d-none">
+                        <div class="fw-semibold text-success mb-2">Most mentioned positives</div>
+                        <div id="reviewSummaryPositives" class="d-flex flex-wrap gap-2"></div>
                     </div>
 
-                    <p class="mb-2">@Model.ReviewSummary.Overview</p>
+                    <div id="reviewSummaryNegativesWrap" class="mb-3 d-none">
+                        <div class="fw-semibold text-warning mb-2">Things to watch</div>
+                        <div id="reviewSummaryNegatives" class="d-flex flex-wrap gap-2"></div>
+                    </div>
 
-                    @if (!string.IsNullOrWhiteSpace(Model.ReviewSummary.RecentTrend))
-                    {
-                        <p class="text-muted mb-3">@Model.ReviewSummary.RecentTrend</p>
-                    }
-
-                    @if (Model.ReviewSummary.PositiveHighlights.Any())
-                    {
-                        <div class="mb-3">
-                            <div class="fw-semibold text-success mb-2">Most mentioned positives</div>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (var highlight in Model.ReviewSummary.PositiveHighlights)
-                                {
-                                    <span class="badge rounded-pill text-bg-success">@highlight</span>
-                                }
-                            </div>
-                        </div>
-                    }
-
-                    @if (Model.ReviewSummary.NegativeHighlights.Any())
-                    {
-                        <div class="mb-3">
-                            <div class="fw-semibold text-warning mb-2">Things to watch</div>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (var highlight in Model.ReviewSummary.NegativeHighlights)
-                                {
-                                    <span class="badge rounded-pill text-bg-warning">@highlight</span>
-                                }
-                            </div>
-                        </div>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(Model.ReviewSummary.RatingBreakdown))
-                    {
-                        <div class="small text-muted">@Model.ReviewSummary.RatingBreakdown</div>
-                    }
+                    <div id="reviewSummaryBreakdown" class="small text-muted d-none"></div>
+                    <div id="reviewSummaryMeta" class="small text-muted mt-2"></div>
                 </div>
             </div>
-        }
+        </div>
 
         @if (Model.Reviews != null && Model.Reviews.Count > 0)
         {
@@ -298,6 +281,134 @@ else
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+    const hasReviews = @((Model.ReviewCount > 0).ToString().ToLowerInvariant());
+
+    function renderBadgeList(containerId, wrapId, items, badgeClass) {
+        const wrap = document.getElementById(wrapId);
+        const container = document.getElementById(containerId);
+        if (!wrap || !container) return;
+
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+            wrap.classList.add('d-none');
+            return;
+        }
+
+        items.forEach(item => {
+            const span = document.createElement('span');
+            span.className = `badge rounded-pill ${badgeClass}`;
+            span.textContent = item;
+            container.appendChild(span);
+        });
+
+        wrap.classList.remove('d-none');
+    }
+
+    function renderReviewSummary(summary, generatedAtUtc, message) {
+        const loading = document.getElementById('reviewSummaryLoading');
+        const error = document.getElementById('reviewSummaryError');
+        const content = document.getElementById('reviewSummaryContent');
+        const overview = document.getElementById('reviewSummaryOverview');
+        const trend = document.getElementById('reviewSummaryTrend');
+        const breakdown = document.getElementById('reviewSummaryBreakdown');
+        const meta = document.getElementById('reviewSummaryMeta');
+
+        if (!summary || !content || !overview || !trend || !breakdown || !meta) return;
+
+        if (loading) loading.classList.add('d-none');
+        if (error) error.classList.add('d-none');
+        content.classList.remove('d-none');
+
+        overview.textContent = summary.overview || '';
+
+        if (summary.recentTrend) {
+            trend.textContent = summary.recentTrend;
+            trend.classList.remove('d-none');
+        } else {
+            trend.textContent = '';
+            trend.classList.add('d-none');
+        }
+
+        if (summary.ratingBreakdown) {
+            breakdown.textContent = summary.ratingBreakdown;
+            breakdown.classList.remove('d-none');
+        } else {
+            breakdown.textContent = '';
+            breakdown.classList.add('d-none');
+        }
+
+        renderBadgeList('reviewSummaryPositives', 'reviewSummaryPositivesWrap', summary.positiveHighlights, 'text-bg-success');
+        renderBadgeList('reviewSummaryNegatives', 'reviewSummaryNegativesWrap', summary.negativeHighlights, 'text-bg-warning');
+
+        if (generatedAtUtc) {
+            const dt = new Date(generatedAtUtc);
+            const text = Number.isNaN(dt.getTime())
+                ? (message || '')
+                : `Updated: ${dt.toLocaleString()}${message ? ` • ${message}` : ''}`;
+            meta.textContent = text;
+        } else {
+            meta.textContent = message || '';
+        }
+    }
+
+    function showReviewSummaryMessage(message) {
+        const loading = document.getElementById('reviewSummaryLoading');
+        const error = document.getElementById('reviewSummaryError');
+        const content = document.getElementById('reviewSummaryContent');
+
+        if (loading) loading.classList.add('d-none');
+        if (content) content.classList.add('d-none');
+        if (error) {
+            error.textContent = message;
+            error.classList.remove('d-none');
+        }
+    }
+
+    async function loadReviewSummary(attempt = 0) {
+        if (!hasReviews) return;
+
+        try {
+            const response = await fetch('@Url.Action("GetReviewSummary", "Apartments", new { id = Model.ApartmentId })');
+            if (!response.ok) {
+                throw new Error('Failed to load review summary');
+            }
+
+            const data = await response.json();
+
+            if (data.summary) {
+                renderReviewSummary(data.summary, data.generatedAtUtc, data.message || '');
+            }
+
+            if (data.status === 'ready') {
+                return;
+            }
+
+            if (data.status === 'processing' && attempt < 12) {
+                const loading = document.getElementById('reviewSummaryLoading');
+                if (loading && !data.summary) {
+                    loading.textContent = 'Generating review summary...';
+                }
+
+                window.setTimeout(() => loadReviewSummary(attempt + 1), 2500);
+                return;
+            }
+
+            if (data.status === 'disabled' || data.status === 'no_data') {
+                showReviewSummaryMessage(data.message || 'Review summary is unavailable.');
+                return;
+            }
+
+            if (data.status === 'processing' && attempt >= 12 && !data.summary) {
+                showReviewSummaryMessage('Summary is still being generated. Please refresh a bit later.');
+            }
+        } catch (error) {
+            console.error('Error loading review summary:', error);
+            showReviewSummaryMessage('Could not load review summary right now.');
+        }
+    }
+
+    loadReviewSummary();
+
     @if (Context.Session.GetString("UserRole") == "Tenant")
     {
         <text>
