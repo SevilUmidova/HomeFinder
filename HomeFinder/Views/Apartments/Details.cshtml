@@ -198,6 +198,10 @@ else
 {
     <div class="container mt-5 mb-5">
         <h3>💬 Reviews (@Model.ReviewCount)</h3>
+        @if (Model.ReviewCount > Model.Reviews.Count)
+        {
+            <p class="text-muted small mb-0">Showing @Model.Reviews.Count most recent of @Model.ReviewCount reviews.</p>
+        }
 
         <div id="reviewSummaryCard" class="card border-0 shadow-sm mt-4 mb-4" style="background: linear-gradient(135deg, #f7fbff 0%, #eef4ff 100%); border-radius: 18px;">
             <div class="card-body p-4">
@@ -367,8 +371,18 @@ else
     async function loadReviewSummary(attempt = 0) {
         if (!hasReviews) return;
 
+        const maxAttemptsWhileEmpty = 10;
+        const pollIntervalMs = 5000;
+
         try {
-            const response = await fetch('@Url.Action("GetReviewSummary", "Apartments", new { id = Model.ApartmentId })');
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(() => controller.abort(), 25000);
+
+            const response = await fetch('@Url.Action("GetReviewSummary", "Apartments", new { id = Model.ApartmentId })', {
+                signal: controller.signal
+            });
+            window.clearTimeout(timeoutId);
+
             if (!response.ok) {
                 throw new Error('Failed to load review summary');
             }
@@ -383,13 +397,18 @@ else
                 return;
             }
 
-            if (data.status === 'processing' && attempt < 12) {
+            // Кэш уже показан, фоновое обновление — не опрашиваем сервер часто (раньше это грузило страницу и БД)
+            if (data.summary && data.status === 'processing') {
+                return;
+            }
+
+            if (data.status === 'processing' && attempt < maxAttemptsWhileEmpty) {
                 const loading = document.getElementById('reviewSummaryLoading');
                 if (loading && !data.summary) {
                     loading.textContent = 'Generating review summary...';
                 }
 
-                window.setTimeout(() => loadReviewSummary(attempt + 1), 2500);
+                window.setTimeout(() => loadReviewSummary(attempt + 1), pollIntervalMs);
                 return;
             }
 
@@ -398,7 +417,7 @@ else
                 return;
             }
 
-            if (data.status === 'processing' && attempt >= 12 && !data.summary) {
+            if (data.status === 'processing' && attempt >= maxAttemptsWhileEmpty && !data.summary) {
                 showReviewSummaryMessage('Summary is still being generated. Please refresh a bit later.');
             }
         } catch (error) {
@@ -407,7 +426,11 @@ else
         }
     }
 
-    loadReviewSummary();
+    const scheduleSummary = window.requestIdleCallback
+        ? (cb) => window.requestIdleCallback(cb, { timeout: 1200 })
+        : (cb) => window.setTimeout(cb, 400);
+
+    scheduleSummary(() => { loadReviewSummary(); });
 
     @if (Context.Session.GetString("UserRole") == "Tenant")
     {

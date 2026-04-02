@@ -223,14 +223,35 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
 
     private async Task WriteCacheAsync(int apartmentId, ReviewSummaryCacheEntry entry, CancellationToken cancellationToken)
     {
-        var directory = Path.GetDirectoryName(GetCachePath(apartmentId));
+        var finalPath = GetCachePath(apartmentId);
+        var directory = Path.GetDirectoryName(finalPath);
         if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
         {
             Directory.CreateDirectory(directory);
         }
 
-        await using var stream = File.Create(GetCachePath(apartmentId));
-        await JsonSerializer.SerializeAsync(stream, entry, JsonOptions, cancellationToken);
+        var tempPath = finalPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            await using (var stream = File.Create(tempPath))
+            {
+                await JsonSerializer.SerializeAsync(stream, entry, JsonOptions, cancellationToken);
+            }
+
+            File.Move(tempPath, finalPath, overwrite: true);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
+            }
+            catch
+            {
+                // ignore cleanup errors
+            }
+        }
     }
 
     private string GetCachePath(int apartmentId)

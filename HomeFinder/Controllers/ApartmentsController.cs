@@ -69,16 +69,16 @@ namespace HomeFinder.Controllers
             return View(viewModels);
         }
 
+        private const int MaxReviewsOnDetailsPage = 50;
+
         [HttpGet]
-        public IActionResult Details(int id)
+        public async Task<IActionResult> Details(int id)
         {
-            var apartment = _context.Apartments
+            var apartment = await _context.Apartments
                 .Include(a => a.Addresses)
                 .Include(a => a.Photos)
                 .Include(a => a.User)
-                .Include(a => a.ReviewApartments)
-                    .ThenInclude(r => r.User)
-                .FirstOrDefault(a => a.ApartmentId == id);
+                .FirstOrDefaultAsync(a => a.ApartmentId == id);
 
             if (apartment == null)
                 return NotFound();
@@ -88,10 +88,33 @@ namespace HomeFinder.Controllers
                 ApartmentId = apartment.ApartmentId,
                 ViewedAt = DateTime.Now
             });
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             var address = apartment.Addresses.FirstOrDefault();
-            var totalViews = _context.ApartmentViewLogs.Count(v => v.ApartmentId == id);
+            var totalViews = await _context.ApartmentViewLogs
+                .AsNoTracking()
+                .CountAsync(v => v.ApartmentId == id);
+
+            var reviewCount = await _context.ReviewApartments
+                .AsNoTracking()
+                .CountAsync(r => r.ApartmentId == id);
+
+            var reviewsPage = await _context.ReviewApartments
+                .AsNoTracking()
+                .Where(r => r.ApartmentId == id)
+                .OrderByDescending(r => r.CreatedAt ?? DateTime.MinValue)
+                .Take(MaxReviewsOnDetailsPage)
+                .Include(r => r.User)
+                .ToListAsync();
+
+            double averageRating = 0;
+            if (reviewCount > 0)
+            {
+                averageRating = await _context.ReviewApartments
+                    .AsNoTracking()
+                    .Where(r => r.ApartmentId == id)
+                    .AverageAsync(r => (double)(r.Rating ?? 0));
+            }
 
             var model = new ApartmentViewModel
             {
@@ -122,34 +145,38 @@ namespace HomeFinder.Controllers
 
                 PhoneNumber = apartment.User?.PhoneNumber,
 
-                AverageRating = apartment.ReviewApartments.Any()
-                    ? apartment.ReviewApartments.Average(r => r.Rating ?? 0)
-                    : 0,
+                AverageRating = averageRating,
 
-                ReviewCount = apartment.ReviewApartments.Count,
+                ReviewCount = reviewCount,
 
-                Reviews = apartment.ReviewApartments
-                    .OrderByDescending(r => r.CreatedAt ?? DateTime.MinValue)
-                    .ToList()
+                Reviews = reviewsPage
             };
 
             return View(model);
         }
 
+        private const int MaxReviewsForAiSummary = 120;
+
         [HttpGet]
         public async Task<IActionResult> GetReviewSummary(int id, CancellationToken cancellationToken)
         {
-            var apartment = await _context.Apartments
+            var exists = await _context.Apartments
                 .AsNoTracking()
-                .Include(a => a.ReviewApartments)
-                .FirstOrDefaultAsync(a => a.ApartmentId == id, cancellationToken);
+                .AnyAsync(a => a.ApartmentId == id, cancellationToken);
 
-            if (apartment == null)
+            if (!exists)
                 return NotFound();
 
+            var reviews = await _context.ReviewApartments
+                .AsNoTracking()
+                .Where(r => r.ApartmentId == id)
+                .OrderByDescending(r => r.CreatedAt ?? DateTime.MinValue)
+                .Take(MaxReviewsForAiSummary)
+                .ToListAsync(cancellationToken);
+
             var result = await _aiReviewSummaryService.GetSummaryAsync(
-                apartment.ApartmentId,
-                apartment.ReviewApartments.ToList(),
+                id,
+                reviews,
                 cancellationToken);
 
             return Json(result);
