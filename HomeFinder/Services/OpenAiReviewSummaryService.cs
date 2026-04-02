@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using HomeFinder.Models;
 
 namespace HomeFinder.Services;
@@ -80,7 +81,7 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                     : "Саммари недоступен: не задан ключ OpenAI.",
                 GeneratedAtUtc = cached?.GeneratedAtUtc,
                 Summary = cached?.Summary,
-                Diagnostic = "Конфигурация: пустой OpenAI:ApiKey (appsettings / переменные среды)."
+                Diagnostic = RedactForClient("Конфигурация: пустой OpenAI:ApiKey (appsettings / переменные среды).")
             };
         }
 
@@ -141,9 +142,9 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                     Message = "Не удалось обновить саммари сейчас. Показана сохранённая версия — попробуйте «Обновить саммари» ещё раз позже.",
                     GeneratedAtUtc = cached.GeneratedAtUtc,
                     Summary = cached.Summary,
-                    Diagnostic = string.IsNullOrWhiteSpace(generateDiagnostic)
+                    Diagnostic = RedactForClient(string.IsNullOrWhiteSpace(generateDiagnostic)
                         ? "OpenAI не вернул валидное саммари (см. логи сервера)."
-                        : generateDiagnostic
+                        : generateDiagnostic)
                 };
             }
 
@@ -153,9 +154,9 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                 Message = "Сейчас саммари не получился. Нажмите «Обновить саммари» или зайдите позже — сутки ждать не обязательно.",
                 GeneratedAtUtc = null,
                 Summary = null,
-                Diagnostic = string.IsNullOrWhiteSpace(generateDiagnostic)
+                Diagnostic = RedactForClient(string.IsNullOrWhiteSpace(generateDiagnostic)
                     ? "Причина не определена (см. логи сервера: OpenAiReviewSummaryService)."
-                    : generateDiagnostic
+                    : generateDiagnostic)
             };
         }
         finally
@@ -302,6 +303,21 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
 
         var t = text.Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal).Trim();
         return t.Length <= max ? t : t[..max] + "…";
+    }
+
+    /// <summary>Убирает из diagnostic для браузера фрагменты ключей из сообщений OpenAI (401 invalid_api_key и т.д.).</summary>
+    private static string? RedactForClient(string? diagnostic)
+    {
+        if (string.IsNullOrEmpty(diagnostic))
+        {
+            return diagnostic;
+        }
+
+        return Regex.Replace(
+            diagnostic,
+            @"sk-[a-zA-Z0-9_*-]{8,}",
+            "[ключ скрыт]",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private async Task<ReviewSummaryCacheEntry?> ReadCacheAsync(int apartmentId, CancellationToken cancellationToken)
