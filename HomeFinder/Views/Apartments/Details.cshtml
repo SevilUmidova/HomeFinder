@@ -207,13 +207,18 @@ else
             <div class="card-body p-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <h5 class="mb-0">🧠 Review Summary</h5>
-                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis" style="font-size: 0.85rem;">
-                        @Model.ReviewCount reviews analyzed
-                    </span>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="reviewSummaryRefreshBtn" title="Запросить новое саммари (без ожидания срока кэша)">
+                            Обновить саммари
+                        </button>
+                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis" style="font-size: 0.85rem;">
+                            @Model.ReviewCount reviews analyzed
+                        </span>
+                    </div>
                 </div>
 
                 <div id="reviewSummaryLoading" class="text-muted">
-                    Generating review summary...
+                    Генерация саммари...
                 </div>
 
                 <div id="reviewSummaryError" class="alert alert-light border d-none mb-0"></div>
@@ -286,6 +291,18 @@ else
 <script>
     document.addEventListener('DOMContentLoaded', function() {
     const hasReviews = @((Model.ReviewCount > 0).ToString().ToLowerInvariant());
+    const reviewSummaryBaseUrl = '@(Url.Action("GetReviewSummary", "Apartments", new { id = Model.ApartmentId }) ?? "")';
+
+    function reviewSummaryUrl(forceRefresh) {
+        if (!forceRefresh) return reviewSummaryBaseUrl;
+        const sep = reviewSummaryBaseUrl.indexOf('?') >= 0 ? '&' : '?';
+        return reviewSummaryBaseUrl + sep + 'refresh=true';
+    }
+
+    function setReviewSummaryBusy(busy) {
+        const btn = document.getElementById('reviewSummaryRefreshBtn');
+        if (btn) btn.disabled = !!busy;
+    }
 
     function renderBadgeList(containerId, wrapId, items, badgeClass) {
         const wrap = document.getElementById(wrapId);
@@ -366,21 +383,35 @@ else
             error.textContent = message;
             error.classList.remove('d-none');
         }
+        setReviewSummaryBusy(false);
     }
 
-    async function loadReviewSummary() {
+    async function loadReviewSummary(forceRefresh) {
         if (!hasReviews) return;
 
+        setReviewSummaryBusy(true);
+
         const loading = document.getElementById('reviewSummaryLoading');
+        const err = document.getElementById('reviewSummaryError');
+        const content = document.getElementById('reviewSummaryContent');
+
+        if (forceRefresh) {
+            if (content) content.classList.add('d-none');
+            if (err) err.classList.add('d-none');
+        }
+
         if (loading) {
-            loading.textContent = 'Generating review summary (one request to AI, may take up to a few minutes)...';
+            loading.classList.remove('d-none');
+            loading.textContent = forceRefresh
+                ? 'Обновляем саммари у ИИ... Обычно до 1–3 минут.'
+                : 'Генерация саммари... Один запрос к ИИ, может занять до нескольких минут.';
         }
 
         try {
             const controller = new AbortController();
             const timeoutId = window.setTimeout(() => controller.abort(), 200000);
 
-            const response = await fetch('@Url.Action("GetReviewSummary", "Apartments", new { id = Model.ApartmentId })', {
+            const response = await fetch(reviewSummaryUrl(!!forceRefresh), {
                 signal: controller.signal
             });
             window.clearTimeout(timeoutId);
@@ -397,7 +428,7 @@ else
             }
 
             if (data.status === 'disabled' || data.status === 'no_data') {
-                showReviewSummaryMessage(data.message || 'Review summary is unavailable.');
+                showReviewSummaryMessage(data.message || 'Саммари сейчас недоступен.');
                 return;
             }
 
@@ -406,18 +437,27 @@ else
                 return;
             }
 
-            showReviewSummaryMessage(data.message || 'Review summary is unavailable.');
+            showReviewSummaryMessage(data.message || 'Саммари сейчас недоступен.');
         } catch (error) {
             console.error('Error loading review summary:', error);
-            showReviewSummaryMessage('Could not load review summary (timeout or network). Try refreshing the page.');
+            showReviewSummaryMessage('Не удалось получить ответ (сеть или таймаут). Нажмите «Обновить саммари» ещё раз.');
+        } finally {
+            setReviewSummaryBusy(false);
         }
+    }
+
+    const refreshSummaryBtn = document.getElementById('reviewSummaryRefreshBtn');
+    if (refreshSummaryBtn) {
+        refreshSummaryBtn.addEventListener('click', function() {
+            loadReviewSummary(true);
+        });
     }
 
     const scheduleSummary = window.requestIdleCallback
         ? (cb) => window.requestIdleCallback(cb, { timeout: 1200 })
         : (cb) => window.setTimeout(cb, 400);
 
-    scheduleSummary(() => { loadReviewSummary(); });
+    scheduleSummary(() => { loadReviewSummary(false); });
 
     @if (Context.Session.GetString("UserRole") == "Tenant")
     {

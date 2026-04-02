@@ -156,7 +156,7 @@ namespace HomeFinder.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetReviewSummary(int id, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetReviewSummary(int id, [FromQuery] bool refresh = false, CancellationToken cancellationToken = default)
         {
             // Один round-trip к БД: квартира + все отзывы с полными текстами
             var apartment = await _context.Apartments
@@ -174,6 +174,7 @@ namespace HomeFinder.Controllers
             var result = await _aiReviewSummaryService.GetSummaryAsync(
                 id,
                 reviews,
+                refresh,
                 cancellationToken);
 
             return Json(result);
