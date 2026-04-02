@@ -368,15 +368,17 @@ else
         }
     }
 
-    async function loadReviewSummary(attempt = 0) {
+    async function loadReviewSummary() {
         if (!hasReviews) return;
 
-        const maxAttemptsWhileEmpty = 10;
-        const pollIntervalMs = 5000;
+        const loading = document.getElementById('reviewSummaryLoading');
+        if (loading) {
+            loading.textContent = 'Generating review summary (one request to AI, may take up to a few minutes)...';
+        }
 
         try {
             const controller = new AbortController();
-            const timeoutId = window.setTimeout(() => controller.abort(), 25000);
+            const timeoutId = window.setTimeout(() => controller.abort(), 200000);
 
             const response = await fetch('@Url.Action("GetReviewSummary", "Apartments", new { id = Model.ApartmentId })', {
                 signal: controller.signal
@@ -389,26 +391,8 @@ else
 
             const data = await response.json();
 
-            if (data.summary) {
+            if (data.status === 'ready' && data.summary) {
                 renderReviewSummary(data.summary, data.generatedAtUtc, data.message || '');
-            }
-
-            if (data.status === 'ready') {
-                return;
-            }
-
-            // Кэш уже показан, фоновое обновление — не опрашиваем сервер часто (раньше это грузило страницу и БД)
-            if (data.summary && data.status === 'processing') {
-                return;
-            }
-
-            if (data.status === 'processing' && attempt < maxAttemptsWhileEmpty) {
-                const loading = document.getElementById('reviewSummaryLoading');
-                if (loading && !data.summary) {
-                    loading.textContent = 'Generating review summary...';
-                }
-
-                window.setTimeout(() => loadReviewSummary(attempt + 1), pollIntervalMs);
                 return;
             }
 
@@ -417,12 +401,15 @@ else
                 return;
             }
 
-            if (data.status === 'processing' && attempt >= maxAttemptsWhileEmpty && !data.summary) {
-                showReviewSummaryMessage('Summary is still being generated. Please refresh a bit later.');
+            if (data.summary) {
+                renderReviewSummary(data.summary, data.generatedAtUtc, data.message || '');
+                return;
             }
+
+            showReviewSummaryMessage(data.message || 'Review summary is unavailable.');
         } catch (error) {
             console.error('Error loading review summary:', error);
-            showReviewSummaryMessage('Could not load review summary right now.');
+            showReviewSummaryMessage('Could not load review summary (timeout or network). Try refreshing the page.');
         }
     }
 

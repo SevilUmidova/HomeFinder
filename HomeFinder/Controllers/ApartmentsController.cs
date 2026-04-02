@@ -155,24 +155,21 @@ namespace HomeFinder.Controllers
             return View(model);
         }
 
-        private const int MaxReviewsForAiSummary = 120;
-
         [HttpGet]
         public async Task<IActionResult> GetReviewSummary(int id, CancellationToken cancellationToken)
         {
-            var exists = await _context.Apartments
+            // Один round-trip к БД: квартира + все отзывы с полными текстами
+            var apartment = await _context.Apartments
                 .AsNoTracking()
-                .AnyAsync(a => a.ApartmentId == id, cancellationToken);
+                .Include(a => a.ReviewApartments)
+                .FirstOrDefaultAsync(a => a.ApartmentId == id, cancellationToken);
 
-            if (!exists)
+            if (apartment == null)
                 return NotFound();
 
-            var reviews = await _context.ReviewApartments
-                .AsNoTracking()
-                .Where(r => r.ApartmentId == id)
+            var reviews = apartment.ReviewApartments
                 .OrderByDescending(r => r.CreatedAt ?? DateTime.MinValue)
-                .Take(MaxReviewsForAiSummary)
-                .ToListAsync(cancellationToken);
+                .ToList();
 
             var result = await _aiReviewSummaryService.GetSummaryAsync(
                 id,
