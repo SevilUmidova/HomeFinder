@@ -52,7 +52,7 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
             return new ReviewSummaryFetchResult
             {
                 Status = "no_data",
-                Message = "Пока нет отзывов для саммари."
+                Message = "No reviews for summary."
             };
         }
 
@@ -64,7 +64,7 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
             return new ReviewSummaryFetchResult
             {
                 Status = "ready",
-                Message = "Из кэша (до 24 ч). Можно обновить кнопкой ниже.",
+                Message = "Can be updated by pressing the button below.",
                 GeneratedAtUtc = cached!.GeneratedAtUtc,
                 Summary = cached.Summary
             };
@@ -77,8 +77,8 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
             {
                 Status = cached?.Summary != null ? "ready" : "disabled",
                 Message = cached?.Summary != null
-                    ? "Ключ OpenAI не настроен; показано сохранённое саммари."
-                    : "Саммари недоступен: не задан ключ OpenAI.",
+                    ? "OpenAI key not configured; showing cached summary."
+                    : "Summary unavailable: OpenAI key is not set.",
                 GeneratedAtUtc = cached?.GeneratedAtUtc,
                 Summary = cached?.Summary,
                 Diagnostic = RedactForClient("Конфигурация: пустой OpenAI:ApiKey (appsettings / переменные среды).")
@@ -97,7 +97,7 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                 return new ReviewSummaryFetchResult
                 {
                     Status = "ready",
-                    Message = "Из кэша (до 24 ч). Можно обновить кнопкой ниже.",
+                    Message = "Can be updated by pressing the button below.",
                     GeneratedAtUtc = cached!.GeneratedAtUtc,
                     Summary = cached.Summary
                 };
@@ -113,7 +113,7 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
             {
                 _logger.LogError(ex, "Failed to generate OpenAI review summary for apartment {ApartmentId}", apartmentId);
                 summary = null;
-                generateDiagnostic = $"Исключение: {TruncateDiagnostic(ex.Message, 400)}";
+                generateDiagnostic = $"Exception: {TruncateDiagnostic(ex.Message, 400)}";
             }
 
             if (summary != null)
@@ -128,7 +128,7 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                 return new ReviewSummaryFetchResult
                 {
                     Status = "ready",
-                    Message = forceRefresh ? "Саммари обновлён." : "Сгенерировано.",
+                    Message = forceRefresh ? "Summary updated." : "Generated.",
                     GeneratedAtUtc = generatedAt,
                     Summary = summary
                 };
@@ -139,11 +139,11 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                 return new ReviewSummaryFetchResult
                 {
                     Status = "ready",
-                    Message = "Не удалось обновить саммари сейчас. Показана сохранённая версия — попробуйте «Обновить саммари» ещё раз позже.",
+                    Message = "Try to update summary later",
                     GeneratedAtUtc = cached.GeneratedAtUtc,
                     Summary = cached.Summary,
                     Diagnostic = RedactForClient(string.IsNullOrWhiteSpace(generateDiagnostic)
-                        ? "OpenAI не вернул валидное саммари (см. логи сервера)."
+                        ? "OpenAI did not return a valid summary (see server logs)."
                         : generateDiagnostic)
                 };
             }
@@ -151,11 +151,11 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
             return new ReviewSummaryFetchResult
             {
                 Status = "disabled",
-                Message = "Сейчас саммари не получился. Нажмите «Обновить саммари» или зайдите позже — сутки ждать не обязательно.",
+                Message = "Try to update summary later",
                 GeneratedAtUtc = null,
                 Summary = null,
                 Diagnostic = RedactForClient(string.IsNullOrWhiteSpace(generateDiagnostic)
-                    ? "Причина не определена (см. логи сервера: OpenAiReviewSummaryService)."
+                    ? "Reason unknown (see server logs: OpenAiReviewSummaryService)."
                     : generateDiagnostic)
             };
         }
@@ -202,7 +202,7 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                         content =
                             "You summarize apartment reviews. Use only the provided reviews. Return valid JSON with keys: " +
                             "overview (string), recentTrend (string), ratingBreakdown (string), positiveHighlights (array of strings), negativeHighlights (array of strings). " +
-                            "All text values must be in Russian. Keep it concise, factual, and do not hallucinate."
+                            "All text values must be in English. Keep it concise, factual, and do not hallucinate."
                     },
                     new
                     {
@@ -240,25 +240,25 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
                 choicesEl.ValueKind != JsonValueKind.Array ||
                 choicesEl.GetArrayLength() == 0)
             {
-                return (null, $"В ответе OpenAI нет choices[]. Фрагмент: {TruncateDiagnostic(raw)}");
+                return (null, $"OpenAI response has no choices[]. Fragment: {TruncateDiagnostic(raw)}");
             }
 
             var choice0 = choicesEl[0];
             if (!choice0.TryGetProperty("message", out var messageEl))
             {
-                return (null, $"Нет message в первом choice. Фрагмент: {TruncateDiagnostic(raw)}");
+                return (null, $"No message in first choice. Fragment: {TruncateDiagnostic(raw)}");
             }
 
             if (!messageEl.TryGetProperty("content", out var contentEl) ||
                 contentEl.ValueKind != JsonValueKind.String)
             {
-                return (null, "Поле message.content отсутствует или не строка.");
+                return (null, "Field message.content is missing or not a string.");
             }
 
             var content = contentEl.GetString();
             if (string.IsNullOrWhiteSpace(content))
             {
-                return (null, "Пустой message.content от OpenAI.");
+                return (null, "Empty message.content from OpenAI.");
             }
 
             using var summaryDoc = JsonDocument.Parse(content);
@@ -277,20 +277,20 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            return (null, "Таймаут или обрыв запроса к OpenAI (проверьте сеть и таймаут клиента). " + ex.Message);
+            return (null, "Timeout or connection error to OpenAI (check network and client timeout). " + ex.Message);
         }
         catch (HttpRequestException ex)
         {
-            return (null, $"HTTP к OpenAI: {TruncateDiagnostic(ex.Message)}");
+            return (null, $"HTTP error to OpenAI: {TruncateDiagnostic(ex.Message)}");
         }
         catch (JsonException ex)
         {
-            return (null, $"Разбор JSON (ответ или content модели): {ex.Message}");
+            return (null, $"JSON parsing error (response or model content): {ex.Message}");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error in GenerateSummaryAsync");
-            return (null, $"Ошибка: {TruncateDiagnostic(ex.Message)}");
+            return (null, $"Error: {TruncateDiagnostic(ex.Message)}");
         }
     }
 
@@ -298,7 +298,7 @@ public class OpenAiReviewSummaryService : IAiReviewSummaryService
     {
         if (string.IsNullOrEmpty(text))
         {
-            return "(пусто)";
+            return "(empty)";
         }
 
         var t = text.Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal).Trim();

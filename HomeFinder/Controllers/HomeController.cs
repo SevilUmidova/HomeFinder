@@ -166,7 +166,7 @@ namespace HomeFinder.Controllers
             var minLng = request.Polygon.Min(p => p.Lng);
             var maxLng = request.Polygon.Max(p => p.Lng);
 
-            // Грубый отбор по bounding box - уходит в SQL
+            // Rough filtration by bounding box - goes to SQL
             var candidates = _context.Apartments
                 .AsNoTracking()
                 .Include(a => a.Addresses)

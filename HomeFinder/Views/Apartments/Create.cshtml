@@ -58,7 +58,7 @@
                     <div class="mb-3">
                         <label class="form-label">🔍 Search address</label>
                         <input type="text" id="addressSearch" class="form-control" placeholder="Amir Temur st, Tashkent..." />
-                        <small class="form-text text-muted">Enter или кликни на карту</small>
+                        <small class="form-text text-muted">Click on the map</small>
                     </div>
                     <div id="addressMap" style="height: 350px; border: 2px solid #dee2e6; border-radius: 0.375rem; margin-bottom: 1rem;"></div>
 
@@ -233,7 +233,7 @@
                     }
                 });
 
-                console.log('🗺️ Полный адрес:', data.display_name);
+                console.log('🗺️ Full address:', data.display_name);
 
             } catch(error) {
                 console.error('Reverse geocoding failed:', error);
@@ -253,7 +253,7 @@
 
                     Array.from(e.target.files).slice(0, 10).forEach((file, index) => {
                         if (file.size > 5 * 1024 * 1024) {
-                            photoPreview.innerHTML += `<div class="col-12 text-danger">❌ ${file.name} слишком большой</div>`;
+                            photoPreview.innerHTML += `<div class="col-12 text-danger">❌ ${file.name} too large</div>`;
                             return;
                         }
 

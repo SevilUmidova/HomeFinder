@@ -208,8 +208,8 @@ else
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <h5 class="mb-0">🧠 Review Summary</h5>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="reviewSummaryRefreshBtn" title="Запросить новое саммари (без ожидания срока кэша)">
-                            Обновить саммари
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="reviewSummaryRefreshBtn" title="Request new summary">
+                            Update summary
                         </button>
                         <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis" style="font-size: 0.85rem;">
                             @Model.ReviewCount reviews analyzed
@@ -218,7 +218,7 @@ else
                 </div>
 
                 <div id="reviewSummaryLoading" class="text-muted">
-                    Генерация саммари...
+                    Generating summary...
                 </div>
 
                 <div id="reviewSummaryError" class="alert alert-light border d-none mb-0"></div>
@@ -307,10 +307,10 @@ else
     /** Детали ошибки с сервера — смотрите в F12 → Console (и вкладка Network → ответ GetReviewSummary). */
     function logReviewSummaryResponse(data) {
         if (data && data.diagnostic) {
-            console.warn('[HomeFinder] Саммари — diagnostic:', data.diagnostic);
+            console.warn('[HomeFinder] Summary — diagnostic:', data.diagnostic);
         }
         if (data && (data.status === 'disabled' || data.status === 'no_data' || data.diagnostic)) {
-            console.info('[HomeFinder] Саммари — полный ответ API:', data);
+            console.info('[HomeFinder] Summary — полный ответ API:', data);
         }
     }
 
@@ -413,8 +413,8 @@ else
         if (loading) {
             loading.classList.remove('d-none');
             loading.textContent = forceRefresh
-                ? 'Обновляем саммари у ИИ... Обычно до 1–3 минут.'
-                : 'Генерация саммари... Один запрос к ИИ, может занять до нескольких минут.';
+                ? 'Updating summary ... Normally 1-3 minutes.'
+                : 'Generating summary... Can take several minutes.';
         }
 
         try {
@@ -441,7 +441,7 @@ else
             }
 
             if (data.status === 'disabled' || data.status === 'no_data') {
-                showReviewSummaryMessage(data.message || 'Саммари сейчас недоступен.');
+                showReviewSummaryMessage(data.message || 'Summary is unavailable now.');
                 return;
             }
 
@@ -450,10 +450,10 @@ else
                 return;
             }
 
-            showReviewSummaryMessage(data.message || 'Саммари сейчас недоступен.');
+            showReviewSummaryMessage(data.message || 'Summary is unavailable now.');
         } catch (error) {
             console.error('[HomeFinder] Саммари — ошибка fetch (сеть / CORS / таймаут):', error);
-            showReviewSummaryMessage('Не удалось получить ответ (сеть или таймаут). Нажмите «Обновить саммари» ещё раз.');
+            showReviewSummaryMessage('Не удалось получить ответ (сеть или таймаут). Press "Update summary" again.');
         } finally {
             setReviewSummaryBusy(false);
         }

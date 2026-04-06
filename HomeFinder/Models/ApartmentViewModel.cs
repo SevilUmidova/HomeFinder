@@ -8,52 +8,52 @@ namespace HomeFinder.Models
         public int ApartmentId { get; set; }
         public int? UserId { get; set; }
 
-        [Display(Name = "Описание")]
+        [Display(Name = "Description")]
         public string Description { get; set; }
 
-        [Display(Name = "Цена")]
+        [Display(Name = "Price")]
         public decimal Price { get; set; }
 
-        [Display(Name = "Размер (м²)")]
+        [Display(Name = "Size (m²)")]
         public int Size { get; set; }
 
-        [Display(Name = "Количество комнат")]
+        [Display(Name = "Number of Rooms")]
         public int Rooms { get; set; }
 
-        [Display(Name = "Улица")]
+        [Display(Name = "Street")]
         public string StreetAddress { get; set; }
 
-        [Display(Name = "Номер дома")]
+        [Display(Name = "Apartment Number")]
         public string BuildingNumber { get; set; }
 
-        [Display(Name = "Номер квартиры")]
+        [Display(Name = "Phone Number")]
         public string ApartmentNumber { get; set; }
 
-        [Display(Name = "Район")]
+        [Display(Name = "District")]
         public string District { get; set; }
 
-        [Display(Name = "Город")]
+        [Display(Name = "City")]
         public string City { get; set; }
 
-        [Display(Name = "Регион")]
+        [Display(Name = "Region")]
         public string Region { get; set; }
 
-        [Display(Name = "Хозяин")]
+        [Display(Name = "Landlord")]
         public string LandlordName { get; set; }
 
-        [Display(Name = "Телефон")]
+        [Display(Name = "Phone Number")]
         public string PhoneNumber { get; set; }
 
-        [Display(Name = "Фото")]
+        [Display(Name = "Photo")]
         public List<string> PhotoPaths { get; set; } = new();
 
-        [Display(Name = "Рейтинг")]
+        [Display(Name = "Rating")]
         public double AverageRating { get; set; }
 
-        [Display(Name = "Количество отзывов")]
+        [Display(Name = "Number of Reviews")]
         public int ReviewCount { get; set; }
 
-        [Display(Name = "Количество просмотров")]
+        [Display(Name = "Number of Views")]
         public int? Views { get; set; }
 
         [Display(Name = "AllText")]
@@ -65,14 +65,14 @@ namespace HomeFinder.Models
         public ReviewSummaryViewModel? ReviewSummary { get; set; }
 
         // ✅ Для загрузки фото при создании/редактировании
-        [Display(Name = "Загрузить фотографии")]
+        [Display(Name = "Upload photos")]
         public List<IFormFile> Photos { get; set; } = new();
 
         // ➕ ДЛЯ КАРТЫ (добавляем только это):
-        [Display(Name = "Широта")]
+        [Display(Name = "Latitude")]
         public decimal? Latitude { get; set; }
 
-        [Display(Name = "Долгота")]
+        [Display(Name = "Longitude")]
         public decimal? Longitude { get; set; }
     }
 
