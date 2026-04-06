@@ -3,6 +3,7 @@ using HomeFinder.Models;
 using HomeFinder.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace HomeFinder.Controllers
 {
@@ -51,6 +52,49 @@ namespace HomeFinder.Controllers
                 path = "/" + path;
 
             return path;
+        }
+
+        private string GetUploadStoragePath()
+        {
+            // На проде wwwroot часто read-only. App_Data обычно безопаснее для записи.
+            var path = Path.Combine(_env.ContentRootPath, "App_Data", "uploads", "photos");
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+            return path;
+        }
+
+        private string SavePhotoAndGetPublicPath(IFormFile file)
+        {
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var fileName = Guid.NewGuid() + ext;
+            var storagePath = GetUploadStoragePath();
+            var fullPath = Path.Combine(storagePath, fileName);
+
+            using (var stream = new FileStream(fullPath, FileMode.Create))
+            {
+                file.CopyTo(stream);
+            }
+
+            // Отдаем через action, не зависим от StaticFiles/wwwroot.
+            return "/user-photos/" + fileName;
+        }
+
+        [HttpGet("/user-photos/{fileName}")]
+        public IActionResult UserPhoto(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return NotFound();
+
+            fileName = Path.GetFileName(fileName);
+            var fullPath = Path.Combine(GetUploadStoragePath(), fileName);
+            if (!System.IO.File.Exists(fullPath))
+                return NotFound();
+
+            var provider = new FileExtensionContentTypeProvider();
+            if (!provider.TryGetContentType(fileName, out var contentType))
+                contentType = "application/octet-stream";
+
+            return PhysicalFile(fullPath, contentType);
         }
 
         // Мои квартиры
@@ -284,11 +328,6 @@ namespace HomeFinder.Controllers
 
             if (model.Photos != null && model.Photos.Any())
             {
-                string uploadPath = Path.Combine(_env.WebRootPath, "photos");
-
-                if (!Directory.Exists(uploadPath))
-                    Directory.CreateDirectory(uploadPath);
-
                 foreach (var file in model.Photos)
                 {
                     if (file.Length == 0)
@@ -300,17 +339,9 @@ namespace HomeFinder.Controllers
                     if (!allowedExtensions.Contains(ext))
                         continue;
 
-                    string fileName = Guid.NewGuid() + ext;
-                    string fullPath = Path.Combine(uploadPath, fileName);
-
-                    using (var stream = new FileStream(fullPath, FileMode.Create))
-                    {
-                        file.CopyTo(stream);
-                    }
-
                     apartment.Photos.Add(new Photo
                     {
-                        PhotoPath = "/photos/" + fileName
+                        PhotoPath = SavePhotoAndGetPublicPath(file)
                     });
                 }
             }
@@ -408,11 +439,6 @@ namespace HomeFinder.Controllers
             // ✅ Добавить новые фото в /photos
             if (model.Photos != null && model.Photos.Any())
             {
-                string uploadPath = Path.Combine(_env.WebRootPath, "photos");
-
-                if (!Directory.Exists(uploadPath))
-                    Directory.CreateDirectory(uploadPath);
-
                 foreach (var file in model.Photos)
                 {
                     if (file.Length == 0)
@@ -424,17 +450,9 @@ namespace HomeFinder.Controllers
                     if (!allowedExtensions.Contains(ext))
                         continue;
 
-                    string fileName = Guid.NewGuid() + ext;
-                    string fullPath = Path.Combine(uploadPath, fileName);
-
-                    using (var stream = new FileStream(fullPath, FileMode.Create))
-                    {
-                        file.CopyTo(stream);
-                    }
-
                     apartment.Photos.Add(new Photo
                     {
-                        PhotoPath = "/photos/" + fileName
+                        PhotoPath = SavePhotoAndGetPublicPath(file)
                     });
                 }
             }
@@ -472,7 +490,18 @@ namespace HomeFinder.Controllers
 
             if (!string.IsNullOrEmpty(photo.PhotoPath))
             {
-                string filePath = Path.Combine(_env.WebRootPath, photo.PhotoPath.TrimStart('/'));
+                var normalized = NormalizePhotoPath(photo.PhotoPath) ?? string.Empty;
+                string filePath;
+                if (normalized.StartsWith("/user-photos/", StringComparison.OrdinalIgnoreCase))
+                {
+                    var fileName = Path.GetFileName(normalized);
+                    filePath = Path.Combine(GetUploadStoragePath(), fileName);
+                }
+                else
+                {
+                    filePath = Path.Combine(_env.WebRootPath, normalized.TrimStart('/'));
+                }
+
                 if (System.IO.File.Exists(filePath))
                 {
                     System.IO.File.Delete(filePath);
