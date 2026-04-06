@@ -29,6 +29,30 @@ namespace HomeFinder.Controllers
                    HttpContext.Session.GetString("UserRole") == "Landlord";
         }
 
+        private static string? NormalizePhotoPath(string? rawPath)
+        {
+            if (string.IsNullOrWhiteSpace(rawPath))
+                return rawPath;
+
+            var path = rawPath.Trim().Replace('\\', '/');
+            var lower = path.ToLowerInvariant();
+
+            if (lower.StartsWith("http://") || lower.StartsWith("https://"))
+                return path;
+
+            var wwwrootIdx = lower.IndexOf("wwwroot/", StringComparison.Ordinal);
+            if (wwwrootIdx >= 0)
+                path = path[(wwwrootIdx + "wwwroot/".Length)..];
+
+            if (path.StartsWith("photos/", StringComparison.OrdinalIgnoreCase))
+                path = "/" + path;
+
+            if (!path.StartsWith("/", StringComparison.Ordinal))
+                path = "/" + path;
+
+            return path;
+        }
+
         // Мои квартиры
         public async Task<IActionResult> MyApartments()
         {
@@ -63,6 +87,15 @@ namespace HomeFinder.Controllers
                 AverageRating = a.ReviewApartments.Any() ? a.ReviewApartments.Average(r => r.Rating ?? 0) : 0,
                 ReviewCount = a.ReviewApartments.Count
             }).ToList();
+
+            foreach (var vm in viewModels)
+            {
+                vm.PhotoPaths = vm.PhotoPaths
+                    .Select(NormalizePhotoPath)
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Cast<string>()
+                    .ToList();
+            }
             var canAdd = await CanAddApartment(userId);
             ViewBag.CanAddApartment = canAdd;
 
@@ -151,6 +184,12 @@ namespace HomeFinder.Controllers
 
                 Reviews = reviewsPage
             };
+
+            model.PhotoPaths = model.PhotoPaths
+                .Select(NormalizePhotoPath)
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Cast<string>()
+                .ToList();
 
             return View(model);
         }
@@ -318,6 +357,12 @@ namespace HomeFinder.Controllers
                 PhotoPaths = apartment.Photos?.Select(p => p.PhotoPath).ToList() ?? new()
             };
 
+            viewModel.PhotoPaths = viewModel.PhotoPaths
+                .Select(NormalizePhotoPath)
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Cast<string>()
+                .ToList();
+
             return View(viewModel);
         }
 
@@ -327,6 +372,9 @@ namespace HomeFinder.Controllers
         {
             if (!IsLandlordLoggedIn())
                 return RedirectToAction("Login", "Account");
+
+            if (id <= 0 && model.ApartmentId > 0)
+                id = model.ApartmentId;
 
             int userId = HttpContext.Session.GetInt32("UserId").Value;
             var apartment = _context.Apartments
@@ -408,11 +456,16 @@ namespace HomeFinder.Controllers
             int userId = HttpContext.Session.GetInt32("UserId").Value;
             var photo = _context.Photos
                 .Include(p => p.Apartment)
-                .FirstOrDefault(p =>
+                .Where(p =>
                     p.ApartmentId == apartmentId &&
-                    p.PhotoPath == photoPath &&
                     p.Apartment != null &&
-                    p.Apartment.UserId == userId);
+                    p.Apartment.UserId == userId)
+                .AsEnumerable()
+                .FirstOrDefault(p =>
+                    string.Equals(
+                        NormalizePhotoPath(p.PhotoPath),
+                        NormalizePhotoPath(photoPath),
+                        StringComparison.OrdinalIgnoreCase));
 
             if (photo == null)
                 return NotFound(new { success = false, message = "Photo not found" });
@@ -467,6 +520,12 @@ namespace HomeFinder.Controllers
                 Latitude = address?.Latitude,       // ✅ Координаты
                 Longitude = address?.Longitude     // ✅ Координаты
             };
+
+            viewModel.PhotoPaths = viewModel.PhotoPaths
+                .Select(NormalizePhotoPath)
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Cast<string>()
+                .ToList();
 
             return View(viewModel);
         }

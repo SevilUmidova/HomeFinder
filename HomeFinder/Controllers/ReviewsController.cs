@@ -30,14 +30,14 @@ namespace HomeFinder.Controllers
             if (rating < 1 || rating > 5)
             {
                 ModelState.AddModelError("rating", "Рейтинг должен быть от 1 до 5");
-                return RedirectToAction("Details", "Home", new { id = apartmentId });
+                return RedirectToAction("Details", "Apartments", new { id = apartmentId });
             }
 
             // ✅ Проверка комментария
             if (string.IsNullOrWhiteSpace(comment))
             {
                 ModelState.AddModelError("comment", "Комментарий не может быть пустым");
-                return RedirectToAction("Details", "Home", new { id = apartmentId });
+                return RedirectToAction("Details", "Apartments", new { id = apartmentId });
             }
 
             int userId = HttpContext.Session.GetInt32("UserId").Value;
@@ -72,7 +72,7 @@ namespace HomeFinder.Controllers
 
                 _context.SaveChanges();
 
-                return RedirectToAction("Details", "Home", new { id = apartmentId });
+                return RedirectToAction("Details", "Apartments", new { id = apartmentId });
             }
             catch (Exception ex)
             {
@@ -109,7 +109,7 @@ namespace HomeFinder.Controllers
                 ModelState.AddModelError("", "Ошибка при удалении отзыва: " + ex.Message);
             }
 
-            return RedirectToAction("Details", "Home", new { id = apartmentId });
+            return RedirectToAction("Details", "Apartments", new { id = apartmentId });
         }
     }
 }
