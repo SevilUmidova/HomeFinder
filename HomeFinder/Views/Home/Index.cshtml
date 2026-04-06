@@ -130,7 +130,8 @@
                     {
                         <img src="@Url.Content(apt.PhotoPaths.First())"
                              class="card-img-top"
-                             style="height:200px; object-fit:cover;" />
+                             style="height:200px; object-fit:cover;"
+                             onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<div class=&quot;bg-secondary text-white text-center&quot; style=&quot;height:200px; display:flex; align-items:center; justify-content:center;&quot;>No Photo</div>');" />
                     }
                     else
                     {

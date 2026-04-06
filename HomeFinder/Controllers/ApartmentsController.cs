@@ -54,6 +54,27 @@ namespace HomeFinder.Controllers
             return path;
         }
 
+        private bool IsPhotoAvailable(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var normalized = NormalizePhotoPath(path) ?? string.Empty;
+            if (normalized.StartsWith("/user-photos/", StringComparison.OrdinalIgnoreCase))
+            {
+                var fileName = Path.GetFileName(normalized);
+                var fullPath = Path.Combine(GetUploadStoragePath(), fileName);
+                return System.IO.File.Exists(fullPath);
+            }
+
+            var fullLocalPath = Path.Combine(_env.WebRootPath, normalized.TrimStart('/'));
+            return System.IO.File.Exists(fullLocalPath);
+        }
+
         private string GetUploadStoragePath()
         {
             // На проде wwwroot часто read-only. App_Data обычно безопаснее для записи.
@@ -132,11 +153,40 @@ namespace HomeFinder.Controllers
                 ReviewCount = a.ReviewApartments.Count
             }).ToList();
 
+            // Чистим "битые" локальные фото у уже существующих квартир этого владельца.
+            bool hasRemovedBrokenPhotos = false;
+            foreach (var apt in apartments)
+            {
+                var broken = apt.Photos?
+                    .Where(p =>
+                    {
+                        var normalized = NormalizePhotoPath(p.PhotoPath);
+                        if (string.IsNullOrWhiteSpace(normalized))
+                            return true;
+                        if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                            normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                            return false;
+                        return !IsPhotoAvailable(normalized);
+                    })
+                    .ToList() ?? new List<Photo>();
+
+                if (broken.Count > 0)
+                {
+                    _context.Photos.RemoveRange(broken);
+                    hasRemovedBrokenPhotos = true;
+                }
+            }
+            if (hasRemovedBrokenPhotos)
+            {
+                await _context.SaveChangesAsync();
+            }
+
             foreach (var vm in viewModels)
             {
                 vm.PhotoPaths = vm.PhotoPaths
                     .Select(NormalizePhotoPath)
                     .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Where(IsPhotoAvailable)
                     .Cast<string>()
                     .ToList();
             }
@@ -232,6 +282,7 @@ namespace HomeFinder.Controllers
             model.PhotoPaths = model.PhotoPaths
                 .Select(NormalizePhotoPath)
                 .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Where(IsPhotoAvailable)
                 .Cast<string>()
                 .ToList();
 
@@ -391,6 +442,7 @@ namespace HomeFinder.Controllers
             viewModel.PhotoPaths = viewModel.PhotoPaths
                 .Select(NormalizePhotoPath)
                 .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Where(IsPhotoAvailable)
                 .Cast<string>()
                 .ToList();
 
@@ -553,6 +605,7 @@ namespace HomeFinder.Controllers
             viewModel.PhotoPaths = viewModel.PhotoPaths
                 .Select(NormalizePhotoPath)
                 .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Where(IsPhotoAvailable)
                 .Cast<string>()
                 .ToList();
 

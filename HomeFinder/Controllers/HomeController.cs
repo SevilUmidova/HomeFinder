@@ -8,10 +8,57 @@ namespace HomeFinder.Controllers
     public class HomeController : Controller
     {
         private readonly HomeFinderContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public HomeController(HomeFinderContext context)
+        public HomeController(HomeFinderContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
+        }
+
+        private static string? NormalizePhotoPath(string? rawPath)
+        {
+            if (string.IsNullOrWhiteSpace(rawPath))
+                return rawPath;
+
+            var path = rawPath.Trim().Replace('\\', '/');
+            var lower = path.ToLowerInvariant();
+
+            if (lower.StartsWith("http://") || lower.StartsWith("https://"))
+                return path;
+
+            var wwwrootIdx = lower.IndexOf("wwwroot/", StringComparison.Ordinal);
+            if (wwwrootIdx >= 0)
+                path = path[(wwwrootIdx + "wwwroot/".Length)..];
+
+            if (path.StartsWith("photos/", StringComparison.OrdinalIgnoreCase))
+                path = "/" + path;
+
+            if (!path.StartsWith("/", StringComparison.Ordinal))
+                path = "/" + path;
+
+            return path;
+        }
+
+        private bool IsPhotoAvailable(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var normalized = NormalizePhotoPath(path) ?? string.Empty;
+            if (normalized.StartsWith("/user-photos/", StringComparison.OrdinalIgnoreCase))
+            {
+                var fileName = Path.GetFileName(normalized);
+                var fullPath = Path.Combine(_env.ContentRootPath, "App_Data", "uploads", "photos", fileName);
+                return System.IO.File.Exists(fullPath);
+            }
+
+            var localPath = Path.Combine(_env.WebRootPath, normalized.TrimStart('/'));
+            return System.IO.File.Exists(localPath);
         }
 
         public IActionResult Index(
@@ -138,6 +185,16 @@ namespace HomeFinder.Controllers
                 })
                 .Take(200)
                 .ToList();
+
+            foreach (var vm in viewModels)
+            {
+                vm.PhotoPaths = vm.PhotoPaths
+                    .Select(NormalizePhotoPath)
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Where(IsPhotoAvailable)
+                    .Cast<string>()
+                    .ToList();
+            }
 
             ViewData["SortBy"] = sortBy;
             ViewData["PriceMin"] = priceMin;
